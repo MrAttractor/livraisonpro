@@ -272,6 +272,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
       </div>
       <div class="ob-error" id="ob-err-global"></div>
       <button class="ob-btn" id="ob-submit" onclick="creerCompte()">J'accepte et je crée mon compte →</button>
+      <div style="text-align:center;margin-top:12px;font-size:13px;color:rgba(255,255,255,.4)">Déjà inscrit ?</div>
+      <button class="ob-btn-ghost" onclick="showReconnexion()">🔑 Me reconnecter avec mon numéro</button>
     </div>
   </div>
   <div id="ob-step2" style="display:none;background:var(--noir);min-height:100vh">
@@ -295,6 +297,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
       </div>
       <button class="ob-btn" onclick="finirOnboarding()">✅ C'est installé — Accéder à l'app</button>
       <button class="ob-btn-ghost" onclick="finirOnboarding()">Passer cette étape →</button>
+    </div>
+    <div id="ob-reconnexion" style="display:none;background:var(--noir);min-height:100vh">
+    <div class="ob-hero">
+      <div class="ob-flag"><div class="fs fo"></div><div class="fs fw"></div><div class="fs fg"></div></div>
+      <div class="ob-title">Bon retour 👋</div>
+      <div class="ob-sub">Entrez votre numéro WhatsApp pour retrouver votre compte.</div>
+    </div>
+    <div class="ob-body">
+      <span class="ob-label">Votre numéro WhatsApp</span>
+      <input class="ob-input" id="rc-tel" placeholder="+225 07 XX XX XX XX" type="tel">
+      <div class="ob-error" id="rc-err">Numéro introuvable — vérifiez ou créez un compte.</div>
+      <button class="ob-btn" id="rc-submit" onclick="seReconnecter()">🔑 Me reconnecter</button>
+      <button class="ob-btn-ghost" onclick="document.getElementById('ob-reconnexion').style.display='none';document.getElementById('ob-step1').style.display='block'">← Retour</button>
     </div>
   </div>
 </div>
@@ -478,6 +493,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
   <button class="fab" id="fab" onclick="showScreen('m-nouvelle')" style="display:none">＋</button>
 </div>
 
+<!-- MODAL GPS -->
+<div class="modal-overlay" id="modal-gps"><div class="modal" style="height:85vh;padding:0;overflow:hidden;border-radius:22px 22px 0 0">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--gris-b)">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800">🗺️ Navigation</div>
+    <button onclick="closeModal('modal-gps')" style="background:var(--gris-l);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px">✕</button>
+  </div>
+  <iframe id="gps-frame" src="" style="width:100%;height:calc(85vh - 55px);border:none"></iframe>
+</div></div>
+
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-mission"><div class="modal"><div class="modal-handle"></div><div id="modal-mission-content"></div><button class="btn btn-ghost" onclick="closeModal('modal-mission')" style="margin-top:10px">Fermer</button></div></div>
 <div class="modal-overlay" id="modal-catalogue"><div class="modal"><div class="modal-handle"></div><div class="modal-title">🔍 Choisir un livreur</div><div id="modal-cat-content"></div><button class="btn btn-ghost" onclick="closeModal('modal-catalogue')" style="margin-top:10px">Fermer</button></div></div>
@@ -520,8 +544,8 @@ setTimeout(function(){
   document.getElementById('splash').style.opacity='0';
   setTimeout(function(){
     document.getElementById('splash').style.display='none';
-    if(USER)initApp();
-    else{document.getElementById('onboarding').style.display='block'}
+    if(USER){normaliserUser();initApp();}else{
+    document.getElementById('onboarding').style.display='block';}}
   },400);
 },1800);
 
@@ -566,7 +590,7 @@ function finirOnboarding(){document.getElementById('onboarding').style.display='
 function initApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('hd-name').textContent=(USER.nom||'').split(' ')[0];
-  document.getElementById('hd-id').textContent=USER.id||'';
+  document.getElementById('hd-id').textContent=(USER.id||'')+(USER.role?' · '+(USER.role==='marchand'?'Marchand':USER.role==='livreur'?'Livreur':''):'');
   document.getElementById('hd-avatar').textContent=(USER.nom||'?')[0].toUpperCase();
   document.getElementById('hd-avatar').style.background=USER.role==='marchand'?'linear-gradient(135deg,#009A44,#007A35)':'linear-gradient(135deg,#F77F00,#D96B00)';
   var today=new Date().toISOString().split('T')[0];
@@ -607,7 +631,7 @@ function showScreen(name){
   var idx=screens.indexOf(name);
   document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',i===idx)});
   document.querySelectorAll('.nav-item').forEach(function(n,i){n.classList.toggle('active',i===idx)});
-  if(name==='l-alertes')fillAlertesMissions();
+  if(name==='l-alertes'){fillAlertesMissions();renderAlertes();}
   if(name==='m-alertes')fillAlertesMarchand();
   if(name==='l-profil')renderStatsL();
 }
@@ -651,7 +675,7 @@ function changerLivreur(){document.getElementById('livreur-sel').style.display='
 async function loadCatalogueModal(){
   var el=document.getElementById('modal-cat-content');
   el.innerHTML='<div style="text-align:center;padding:20px"><div class="ld-spin" style="margin:0 auto 10px"></div><div style="font-size:13px;color:var(--gris)">Chargement...</div></div>';
-  var res=await api({action:'getCatalogue',role:'livreur',plan:USER.plan||'gratuit'});
+  var res=await api({action:'getCatalogue',role:'livreur',plan:'pro'});
   if(!res.ok||!res.items||!res.items.length){el.innerHTML=empty('🔍','Aucun livreur dans le catalogue.')+'<div style="margin-top:12px;padding:14px;background:var(--or-l);border-radius:var(--r-sm);font-size:13px;color:var(--or-d);text-align:center">Invitez votre livreur via WhatsApp.</div>';return}
   var html=(res.locked?'<div style="background:var(--or-l);border-radius:var(--r-sm);padding:12px;margin-bottom:12px;font-size:13px;color:var(--or-d);text-align:center">'+res.total+' livreurs disponibles — passez Pro pour voir les profils</div>':'');
   html+=res.items.map(function(p){
@@ -722,11 +746,11 @@ function renderMissions(){
   var today=MISSIONS.filter(function(m){try{return new Date(m.createdAt).toDateString()===new Date().toDateString()}catch(e){return false}});
   if(USER.role==='livreur'){
     var te=document.getElementById('l-today');var ae=document.getElementById('l-all');
-    if(te)te.innerHTML=today.length?today.map(mCard).join(''):empty('📦','Aucune mission aujourd\'hui.\nVotre marchand va bientôt vous envoyer une demande.');
+    if(te)te.innerHTML=today.length?today.map(mCard).join(''):'<div style="text-align:center;padding:20px 0"><div style="font-size:36px;margin-bottom:12px">🛵</div><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;color:var(--noir);margin-bottom:8px">Prêt à livrer !</div><div style="font-size:12px;color:var(--gris);line-height:1.8">✅ Bon de livraison automatique<br>✅ Preuve horodatée à chaque livraison<br>✅ Suivi temps réel pour vos clients<br>✅ Votre CA en temps réel<br><br><span style="color:var(--or);font-weight:600">Votre marchand va bientôt vous envoyer une mission.</span></div></div>';
     if(ae)ae.innerHTML=MISSIONS.length?MISSIONS.map(mCard).join(''):empty('📦','Aucune mission encore.\nDemandez à votre marchand de créer une livraison.');
   }else{
     var re=document.getElementById('m-recent');
-    if(re)re.innerHTML=MISSIONS.length?MISSIONS.slice(0,8).map(mCard).join(''):empty('🛍️','Aucune livraison encore.\nAppuyez sur ➕ pour créer votre première livraison.');
+    if(re)re.innerHTML=MISSIONS.length?MISSIONS.slice(0,8).map(mCard).join(''):'<div style="text-align:center;padding:20px 0"><div style="font-size:36px;margin-bottom:12px">🛍️</div><div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;color:var(--noir);margin-bottom:8px">Bienvenue sur Livraison Pro</div><div style="font-size:12px;color:var(--gris);line-height:1.8">Conçu pour soulager les marchands<br>et professionnaliser le métier de livreur.<br><br>✅ Suivi temps réel pour vos clientes<br>✅ Bon de livraison automatique<br>✅ Preuve en cas de litige<br>✅ Rapport mensuel<br><br><span style="color:var(--or);font-weight:600">Appuyez sur ➕ pour créer votre première livraison.</span></div><div style="margin-top:16px;background:var(--noir);border-radius:var(--r);padding:12px;font-size:11px;color:rgba(255,255,255,.5);line-height:1.6">📣 <strong style="color:var(--or)">Bientôt :</strong> Série de formations gratuites<br>pour devenir un AS de la livraison 🏆</div></div>';
   }
 }
 
@@ -894,7 +918,7 @@ function demanderVerification(){
   toast('📲 Message envoyé — envoyez vos documents en réponse','vt');
 }
 
-function showAide(role){
+function PLACEHOLDER_showAide(role){
   var marchandAide='<div class="aide-item"><div class="aide-q">📦 Comment créer une livraison ?</div><div class="aide-a">Onglet ➕ Nouveau → remplissez les informations → choisissez votre livreur → envoyez. Le livreur reçoit la demande sur WhatsApp.</div></div><div class="aide-item"><div class="aide-q">🔗 Comment la cliente suit son colis ?</div><div class="aide-a">Dans le détail d\'une livraison → "Copier le lien de suivi" → envoyez à votre cliente. Elle voit tout en temps réel.</div></div><div class="aide-item"><div class="aide-q">💰 Combien ça coûte ?</div><div class="aide-a">Le premier mois est 100% gratuit. Ensuite 3 000 FCFA/mois. Livraison Pro ne gagne que si vous livrez.</div></div>';
   var livreurAide='<div class="aide-item"><div class="aide-q">📋 Comment je reçois une mission ?</div><div class="aide-a">Le marchand crée une livraison et vous envoie la demande sur WhatsApp. Vous la voyez dans Missions. Acceptez en 1 tap.</div></div><div class="aide-item"><div class="aide-q">📄 C\'est quoi le bon de livraison ?</div><div class="aide-a">Quand vous confirmez la livraison, un bon est généré automatiquement avec date, heure et mode de paiement. Votre preuve en cas de litige.</div></div><div class="aide-item"><div class="aide-q">💰 Combien ça coûte ?</div><div class="aide-a">Le premier mois est 100% gratuit. Ensuite 2 000 FCFA/mois. Livraison Pro ne gagne que si vous livrez.</div></div>';
   document.getElementById('modal-aide-content').innerHTML=role==='m'?marchandAide:livreurAide;
@@ -967,6 +991,58 @@ function seDeconnecter(){
   toast('À bientôt !','');
   setTimeout(function(){window.location.reload()},1000);
 }
+
+// RECONNEXION
+function showReconnexion(){
+  document.getElementById('ob-step1').style.display='none';
+  document.getElementById('ob-reconnexion').style.display='block';
+}
+
+async function seReconnecter(){
+  var tel=document.getElementById('rc-tel').value.trim();
+  var err=document.getElementById('rc-err');
+  var btn=document.getElementById('rc-submit');
+  err.style.display='none';
+  if(!tel||!valTel(tel)){err.style.display='block';err.textContent='Format invalide — Ex: +225 07 12 34 56 78';return}
+  btn.disabled=true;btn.textContent='Recherche...';
+  showLoading('Recherche de votre compte...');
+  var res=await api({action:'getUserByTel',tel:fmtTel(tel)});
+  hideLoading();btn.disabled=false;btn.textContent='🔑 Me reconnecter';
+  if(!res.ok||!res.user){err.style.display='block';err.textContent='Numéro introuvable — créez un compte.';return}
+  USER=res.user;
+  localStorage.setItem('lp_user',JSON.stringify(USER));
+  document.getElementById('onboarding').style.display='none';
+  initApp();
+  syncData(false);
+  toast('Bon retour '+(USER.nom||'').split(' ')[0]+' !','vt');
+}
+
+// GPS dans modal — ne quitte pas l'app
+function ouvrirGPS(adresse){
+  var url='https://www.google.com/maps/search/'+encodeURIComponent(adresse);
+  document.getElementById('gps-frame').src=url;
+  openModal('modal-gps');
+}
+
+// Normaliser role vendeuse -> marchand au chargement
+function normaliserUser(){
+  if(!USER)return;
+  if(USER.role==='vendeuse'||USER.role==='vendeur'){
+    USER.role='marchand';
+    localStorage.setItem('lp_user',JSON.stringify(USER));
+  }
+}
+
 </script>
 </body>
 </html>
+
+function showAide(role){
+  var intro='<div style="background:linear-gradient(135deg,var(--noir),#1c1c2e);border-radius:var(--r);padding:16px;margin-bottom:14px;text-align:center"><div style="font-size:11px;color:var(--or);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">LIVRAISON PRO</div><div style="font-family:\'Syne\',sans-serif;font-size:14px;font-weight:800;color:#fff;margin-bottom:6px">Conçu pour soulager les marchands et professionnaliser le métier de livreur indépendant</div><div style="font-size:11px;color:rgba(255,255,255,.4)">Simple · Rapide · Professionnel 🇨🇮</div></div>';
+  var promo='<div style="background:var(--or-l);border-radius:var(--r-sm);padding:12px;margin-bottom:14px;font-size:12px;color:var(--or-d);text-align:center;font-weight:600">📣 Bientôt : Série de formations gratuites pour devenir un AS de la livraison 🏆</div>';
+  var clienteAide='<div style="font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">👤 Pour les clientes</div><div class="aide-item"><div class="aide-q">🔗 Comment suivre mon colis ?</div><div class="aide-a">Votre marchand vous envoie un lien par WhatsApp. Cliquez dessus — vous voyez exactement où est votre colis en temps réel. Sans télécharger d'application.</div></div><div class="aide-item"><div class="aide-q">📄 Comment avoir une preuve de livraison ?</div><div class="aide-a">Quand votre colis est livré, un bon numérique est généré automatiquement. Votre marchand peut vous l'envoyer par WhatsApp.</div></div>';
+  var marchandAide='<div style="font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🛍️ Pour les marchands</div><div class="aide-item"><div class="aide-q">📦 Comment créer une livraison ?</div><div class="aide-a">Onglet ➕ Nouveau → remplissez les informations → choisissez votre livreur → envoyez. Le livreur reçoit la demande sur WhatsApp.</div></div><div class="aide-item"><div class="aide-q">🔗 Comment la cliente suit son colis ?</div><div class="aide-a">Dans le détail d'une livraison → "Copier le lien de suivi" → envoyez à votre cliente. Elle voit tout en temps réel.</div></div><div class="aide-item"><div class="aide-q">💰 Combien ça coûte ?</div><div class="aide-a">Le premier mois est 100% gratuit. Ensuite 3 000 FCFA/mois. Livraison Pro ne gagne que si vous livrez.</div></div>';
+  var livreurAide='<div style="font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px">🛵 Pour les livreurs</div><div class="aide-item"><div class="aide-q">📋 Comment je reçois une mission ?</div><div class="aide-a">Le marchand crée une livraison et vous envoie la demande sur WhatsApp. Vous la voyez dans Missions. Acceptez en 1 tap.</div></div><div class="aide-item"><div class="aide-q">📄 C'est quoi le bon de livraison ?</div><div class="aide-a">Quand vous confirmez la livraison, un bon est généré avec date, heure et mode de paiement. Votre preuve en cas de litige.</div></div><div class="aide-item"><div class="aide-q">💰 Combien ça coûte ?</div><div class="aide-a">Le premier mois est 100% gratuit. Ensuite 2 000 FCFA/mois. Livraison Pro ne gagne que si vous livrez.</div></div>';
+  document.getElementById('modal-aide-content').innerHTML=intro+promo+clienteAide+marchandAide+livreurAide;
+  openModal('modal-aide');
+}
