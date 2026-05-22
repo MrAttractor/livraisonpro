@@ -1,0 +1,288 @@
+{document.getElementById('m-total').textContent=s.totalMissions||0;document.getElementById('m-ok').textContent=(s.livreesAujourdhui||0)+' livrés';document.getElementById('m-vol').textContent=(s.volume||0).toLocaleString();document.getElementById('m-route').textContent=s.enRoute||0;document.getElementById('m-alrt').textContent=s.alertesActives||0}
+renderMissions()}
+
+function renderMissions(){
+  const today=MISSIONS.filter(m=>{try{return new Date(m.createdAt).toDateString()===new Date().toDateString()}catch(e){return false}});
+  if(USER.role==='livreur'){
+    const te=document.getElementById('l-today');const ae=document.getElementById('l-all');
+    te.innerHTML=today.length?today.map(mCard).join(''):empty('📦','Aucune mission aujourd\'hui.\nVotre marchand va bientôt vous envoyer une demande.');
+    ae.innerHTML=MISSIONS.length?MISSIONS.map(mCard).join(''):empty('📦','Aucune mission encore.\nDemandez à votre marchand de créer une livraison.');
+  }else{
+    const re=document.getElementById('m-recent');
+    re.innerHTML=MISSIONS.length?MISSIONS.slice(0,8).map(mCard).join(''):empty('🛍️','Aucune livraison encore.\nAppuyez sur ➕ pour créer votre première livraison.');
+  }
+}
+
+function mCard(m){
+  const s=ST[m.status]||ST.attente;
+  const hasA=ALERTES.some(a=>(a.missionId||a.mission_id)===m.id);
+  return`<div class="mission-item${hasA?' alerte':''}" onclick="showMission('${m.id}')">
+    <div class="mi-top"><div class="mi-id">${m.id}</div><div class="mi-status" style="background:${s.bg};color:${s.c}">${s.l}</div></div>
+    <div class="mi-dest">${m.destNom||m.dest_nom||'—'}</div>
+    <div class="mi-addr">📍 ${m.commune} · ${(m.adresse||'').substring(0,28)}${(m.adresse||'').length>28?'...':''}</div>
+    <div class="mi-bottom"><div class="mi-frais">${(parseInt(m.frais)||0).toLocaleString()} FCFA</div>${m.modePaiement||m.mode_paiement?`<div class="mi-pay">${m.modePaiement||m.mode_paiement}</div>`:''}</div>
+  </div>`;
+}
+
+async function showMission(id){
+  showLoading('Chargement...');
+  const res=await api({action:'getMission',id});
+  hideLoading();
+  if(!res.ok){toast('❌ '+res.error,'rouge');return}
+  const m=res.mission;const s=ST[m.status]||ST.attente;
+  const next={attente:'accepte',accepte:'recupere',recupere:'enroute',enroute:'livre'};
+  const nextL={accepte:'✅ Accepter la mission',recupere:'📦 Colis récupéré',enroute:'🛵 Partir en livraison',livre:'✅ Confirmer la livraison'};
+  let actions='';
+  if(USER.role==='livreur'){
+    if(next[m.status])actions+=`<button class="btn btn-vt" onclick="changerStatus('${m.id}','${next[m.status]}','${m.destTel||m.dest_tel||''}','${m.destNom||m.dest_nom||''}')" style="margin-bottom:8px">${nextL[next[m.status]]}</button>`;
+    if(!['livre','echec','annule'].includes(m.status))actions+=`<button class="btn btn-ghost" onclick="changerStatus('${m.id}','echec','','')" style="margin-bottom:8px">❌ Signaler un échec</button>`;
+  }
+  if(USER.role==='marchand'&&m.status==='attente')actions+=`<button class="btn btn-rouge" onclick="changerStatus('${m.id}','annule','','')" style="margin-bottom:8px">🚫 Annuler</button>`;
+  actions+=`<button class="gps-btn" onclick="window.open('https://www.google.com/maps/search/'+encodeURIComponent('${m.adresse} ${m.commune} Abidjan'))">🗺️ Ouvrir dans Google Maps</button>`;
+  let bonHtml='';
+  if(m.bonId||m.bon_id){
+    const br=await api({action:'getBon',id:m.bonId||m.bon_id});
+    if(br.ok){const b=br.bon;bonHtml=`<div class="bon"><div class="bon-header"><div class="bon-title">📄 Bon de Livraison</div><div style="font-size:10px;color:var(--gris)">${b.id}</div></div><div class="bon-row"><span class="bon-key">Marchand</span><span class="bon-val">${b.vendeuse}</span></div><div class="bon-row"><span class="bon-key">Livreur</span><span class="bon-val">${b.livreur}</span></div><div class="bon-row"><span class="bon-key">Destinataire</span><span class="bon-val">${b.dest}</span></div><div class="bon-row"><span class="bon-key">Adresse</span><span class="bon-val">${b.adresse}</span></div><div class="bon-row"><span class="bon-key">Paiement</span><span class="bon-val" style="color:var(--vt);font-weight:800">${b.modePaiement||'—'}</span></div><div class="bon-row"><span class="bon-key">Frais</span><span class="bon-val" style="color:var(--vt);font-weight:800">${(parseInt(b.frais)||0).toLocaleString()} FCFA</span></div><div class="bon-stamp">LIVRÉ ✅ — ${fmtDate(b.generatedAt||b.generated_at)}</div></div><button class="btn btn-vt" style="margin-bottom:8px" onclick="partagerBon(${JSON.stringify(b).replace(/'/g,'&#39;')})">📤 Partager le bon WhatsApp</button>`}
+  }
+  const tl=[];
+  if(m.createdAt||m.created_at)tl.push({l:'📋 Demande créée',t:fmtDate(m.createdAt||m.created_at)});
+  if(m.acceptedAt||m.accepted_at)tl.push({l:'✅ Acceptée',t:fmtDate(m.acceptedAt||m.accepted_at)});
+  if(m.recupereAt||m.recupere_at)tl.push({l:'📦 Colis récupéré',t:fmtDate(m.recupereAt||m.recupere_at)});
+  if(m.enrouteAt||m.enroute_at)tl.push({l:'🛵 En route',t:fmtDate(m.enrouteAt||m.enroute_at)});
+  if(m.livreAt||m.livre_at)tl.push({l:'✅ Livré',t:fmtDate(m.livreAt||m.livre_at)});
+  const trackUrl=window.location.href.split('?')[0]+'?track='+m.id;
+  document.getElementById('modal-mission-content').innerHTML=`
+    <div class="modal-title">${m.id}</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:${s.bg};color:${s.c};font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;margin-bottom:12px">${s.l}</div>
+    <div class="card" style="margin-bottom:10px">
+      <div class="bon-row"><span class="bon-key">Destinataire</span><span class="bon-val" style="font-weight:700">${m.destNom||m.dest_nom}</span></div>
+      ${(m.destTel||m.dest_tel)?`<div class="bon-row"><span class="bon-key">Téléphone</span><span class="bon-val">${m.destTel||m.dest_tel}</span></div>`:''}
+      <div class="bon-row"><span class="bon-key">Adresse</span><span class="bon-val">${m.adresse}, ${m.commune}</span></div>
+      ${m.description?`<div class="bon-row"><span class="bon-key">Contenu</span><span class="bon-val">${m.description}</span></div>`:''}
+      <div class="bon-row"><span class="bon-key">Paiement</span><span class="bon-val">${m.modePaiement||m.mode_paiement||'—'}</span></div>
+      <div class="bon-row"><span class="bon-key">Frais</span><span class="bon-val" style="color:var(--vt);font-weight:800;font-size:14px">${(parseInt(m.frais)||0).toLocaleString()} FCFA</span></div>
+    </div>
+    ${bonHtml}
+    ${tl.length?`<div class="card" style="margin-bottom:10px"><div class="card-title"><span class="ci ci-vt">📍</span>Suivi</div><div class="tl">${tl.map(t=>`<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-content"><div class="tl-title">${t.l}</div><div class="tl-time">${t.t}</div></div></div>`).join('')}</div></div>`:''}
+    ${actions}
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="copierLien('${trackUrl}')">🔗 Copier le lien de suivi cliente</button>`;
+  openModal('modal-mission');
+}
+
+function copierLien(url){navigator.clipboard?.writeText(url).then(()=>toast('✅ Lien copié ! Envoyez-le à votre cliente par WhatsApp','vt')).catch(()=>toast(url))}
+
+async function changerStatus(id,newStatus,destTel,destNom){
+  showLoading('Mise à jour...');
+  const res=await api({action:'updateStatus',id,status:newStatus});
+  hideLoading();
+  if(!res.ok){toast('❌ '+res.error,'rouge');return}
+  const msgs={accepte:'✅ Mission acceptée !',recupere:'📦 Colis récupéré !',enroute:'🛵 En route !',livre:'✅ Livraison confirmée — bon généré !',echec:'❌ Échec enregistré',annule:'🚫 Annulé'};
+  toast(msgs[newStatus]||'Statut mis à jour','vt');
+  closeModal('modal-mission');
+  await syncData(false);
+  if((newStatus==='enroute'||newStatus==='livre')&&destTel&&destTel!=='undefined'&&destTel!==''){
+    const tel=destTel.replace('+','');
+    const msg=newStatus==='enroute'?`🛵 *LIVRAISON PRO* — Votre colis est en route !\n\nBonjour ${destNom} 👋\nVotre commande ${id} arrive bientôt.\n\n— Livraison Pro 🇨🇮`:`✅ *LIVRAISON PRO* — Livré !\n\nBonjour ${destNom} 👋\nVotre commande ${id} a été livrée. Merci 🙏\n\n— Livraison Pro 🇨🇮`;
+    setTimeout(()=>{if(confirm('Notifier '+destNom+' par WhatsApp ?'))window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(msg))},400);
+  }
+}
+
+function partagerBon(b){
+  const msg=`📄 *BON DE LIVRAISON — Livraison Pro 🇨🇮*\n\n✅ ${b.id}\n👤 ${b.dest}\n📍 ${b.adresse}\n📦 ${b.description||'—'}\n💳 Paiement : ${b.modePaiement||'—'}\n💰 Frais : ${(parseInt(b.frais)||0).toLocaleString()} FCFA\n🛵 Livreur : ${b.livreur}\n🏪 Marchand : ${b.vendeuse}\n\n🕐 ${fmtDate(b.generatedAt||b.generated_at)}\n\n*Livraison confirmée ✅*`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg));
+}
+
+async function creerLivraison(){
+  const dest=document.getElementById('m-dest').value.trim();
+  const destTel=document.getElementById('m-dest-tel').value.trim();
+  const depart=document.getElementById('m-depart').value.trim();
+  const arrivee=document.getElementById('m-arrivee').value.trim();
+  const commune=document.getElementById('m-commune').value;
+  const frais=document.getElementById('m-frais').value;
+  const paiement=document.getElementById('m-paiement').value;
+  const desc=document.getElementById('m-desc').value.trim();
+  const date=document.getElementById('m-date').value;
+  const livreurNom=document.getElementById('m-livreur-nom').value||'Non assigné';
+  const livreurTel=document.getElementById('m-livreur-tel').value||'';
+  const errTel=document.getElementById('m-tel-err');
+  const btn=document.getElementById('btn-creer');
+  errTel.style.display='none';
+  if(!dest||!arrivee||!commune){toast('❌ Destinataire, adresse et commune requis','rouge');return}
+  if(destTel&&!valTel(destTel)){errTel.style.display='block';return}
+  if(!paiement){toast('❌ Choisissez un mode de paiement','rouge');return}
+  btn.disabled=true;
+  showLoading('Création de la livraison...');
+  const kmTxt=document.getElementById('dist-km')?.textContent||'0';
+  const km=parseInt(kmTxt)||0;
+  const res=await api({action:'createMission',vendeuseId:USER.id,vendeuseNom:USER.nom,vendeusetel:USER.tel,livreurNom,destNom:dest,destTel:destTel?fmtTel(destTel):'',adresseDepart:depart,adresse:arrivee,commune,frais:frais||'0',modePaiement:paiement,description:desc,dateSouhaitee:date,distanceKm:km});
+  hideLoading();btn.disabled=false;
+  if(!res.ok){toast('❌ '+res.error,'rouge');return}
+  if(res.warning)toast('⚠️ '+res.warning,'');
+  ['m-dest','m-dest-tel','m-depart','m-arrivee','m-frais','m-desc'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  document.getElementById('m-commune').value='';document.getElementById('m-paiement').value='';
+  document.getElementById('dist-result').classList.remove('show');changerLivreur();
+  await syncData(false);showScreen('m-home');
+  toast('✅ Livraison '+res.id+' créée !','vt');
+  const msg=`🛵 *LIVRAISON PRO — Nouvelle demande*\n\nBonjour ${livreurNom} !\n\n📦 Mission : ${res.id}\n👤 Destinataire : ${dest}\n📍 Adresse : ${arrivee}, ${commune}\n💰 Frais : ${parseInt(frais||0).toLocaleString()} FCFA\n💳 Paiement : ${paiement}\n📝 Contenu : ${desc||'—'}\n🗓️ Date : ${date||'Dès que possible'}\n\n✅ Ouvrez Livraison Pro pour accepter 🇨🇮`;
+  setTimeout(()=>{if(confirm('Envoyer la demande à '+livreurNom+' par WhatsApp ?'))window.open('https://wa.me/'+(livreurTel.replace('+','')||'')+'?text='+encodeURIComponent(msg))},400);
+}
+
+function renderAlertes(){
+  const mine=ALERTES.filter(a=>a.fromRole==='livreur'||a.from_role==='livreur');
+  const html=mine.length?mine.map(a=>`<div class="alerte-bar"><span class="ai">🚨</span><div class="at"><strong>${a.missionId||a.mission_id} — ${a.type}</strong><br>${a.description}<br><span style="font-size:9px;opacity:.6">${fmtDate(a.createdAt||a.created_at)}</span></div></div>`).join(''):empty('✅','Aucune alerte.');
+  const elL=document.getElementById('l-al-sent');const elM=document.getElementById('m-al-recues');
+  if(elL)elL.innerHTML=html;if(elM)elM.innerHTML=html;
+}
+
+function fillAlertesMissions(){const sel=document.getElementById('l-al-mission');if(!sel)return;sel.innerHTML='<option value="">Choisir...</option>'+MISSIONS.filter(m=>!['livre','annule'].includes(m.status)).map(m=>`<option value="${m.id}">${m.id} — ${m.destNom||m.dest_nom}</option>`).join('')}
+function fillAlertesMarchand(){const sel=document.getElementById('m-al-liv');if(!sel)return;sel.innerHTML='<option value="">Choisir...</option>'+MISSIONS.map(m=>`<option value="${m.id}">${m.id} — ${m.destNom||m.dest_nom}</option>`).join('');renderAlertes()}
+
+async function envoyerAlerteL(){
+  const mid=document.getElementById('l-al-mission').value;const type=document.getElementById('l-al-type').value;const desc=document.getElementById('l-al-desc').value.trim();
+  if(!mid||!type||!desc){toast('❌ Remplissez tous les champs','rouge');return}
+  showLoading('Envoi...');const res=await api({action:'createAlerte',missionId:mid,fromRole:'livreur',fromNom:USER.nom,type,description:desc});hideLoading();
+  if(!res.ok){toast('❌ '+res.error,'rouge');return}
+  document.getElementById('l-al-mission').value='';document.getElementById('l-al-type').value='';document.getElementById('l-al-desc').value='';
+  await syncData(false);toast('🚨 Alerte envoyée !','vt');
+  const m=MISSIONS.find(x=>x.id===mid);
+  if(m){setTimeout(()=>{const msg=`🚨 *LIVRAISON PRO — Alerte livreur*\n\n📦 ${mid}\n⚠️ ${type}\n📝 ${desc}\n${type.includes('URGENT')?'\n*INTERVENTION REQUISE* 🔴':''}\n— ${USER.nom}`;if(confirm('Notifier le marchand par WhatsApp ?'))window.open('https://wa.me/?text='+encodeURIComponent(msg))},400)}
+}
+
+async function envoyerAlerteM(){
+  const lid=document.getElementById('m-al-liv').value;const type=document.getElementById('m-al-type').value;const msg=document.getElementById('m-al-msg').value.trim();
+  if(!lid||!type||!msg){toast('❌ Remplissez tous les champs','rouge');return}
+  showLoading('Envoi...');await api({action:'createAlerte',missionId:lid,fromRole:'marchand',fromNom:USER.nom,type,description:msg});hideLoading();
+  toast('🚨 Alerte envoyée !','vt');
+  const m=MISSIONS.find(x=>x.id===lid);
+  setTimeout(()=>{
+    const msgL=`🚨 *LIVRAISON PRO — Alerte marchand*\n\n📦 ${lid}\n⚠️ ${type}\n📝 ${msg}\n— ${USER.nom}`;
+    if(confirm('Alerter le livreur par WhatsApp ?'))window.open('https://wa.me/?text='+encodeURIComponent(msgL));
+    if(m&&(m.destTel||m.dest_tel)){const telD=(m.destTel||m.dest_tel).replace('+','');const msgD=`🚨 *LIVRAISON PRO*\n\n${type==='annulation'?'Votre livraison a été annulée.':msg}\n— ${USER.nom}`;if(confirm('Alerter aussi la destinataire ?'))window.open('https://wa.me/'+telD+'?text='+encodeURIComponent(msgD))}
+  },400);
+}
+
+async function genRapport(){
+  const mois=document.getElementById('m-mois').value;
+  showLoading('Génération...');const res=await api({action:'genererRapportMensuel',userId:USER.id,mois,annee:new Date().getFullYear()});hideLoading();
+  if(!res.ok){toast('❌ '+res.error,'rouge');return}
+  const r=res.rapport;const moisNoms=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  document.getElementById('m-rapport-result').innerHTML=`<div class="card"><div class="card-title"><span class="ci ci-vt">📄</span>Rapport ${moisNoms[r.mois]||r.mois} ${r.annee}</div><div class="rr"><span style="color:var(--gris)">Total livraisons</span><span style="font-weight:700">${r.total}</span></div><div class="rr"><span style="color:var(--gris)">Livrées avec succès</span><span style="font-weight:700;color:var(--vt)">${r.livrees}</span></div><div class="rr"><span style="color:var(--gris)">Taux de succès</span><span style="font-weight:700">${r.tauxSucces}%</span></div><div class="rr"><span style="color:var(--gris)">Volume total</span><span style="font-weight:800;color:var(--or);font-size:15px">${(r.volume||0).toLocaleString()} FCFA</span></div></div><button class="btn btn-vt" onclick="partagerRapport(${JSON.stringify(r).replace(/'/g,'&#39;')})">📤 Envoyer par WhatsApp</button>`;
+}
+
+function partagerRapport(r){const moisNoms=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];const msg=`📊 *RAPPORT LIVRAISON PRO — ${moisNoms[r.mois]||r.mois} ${r.annee}*\n\n🏪 ${USER.nom}\n\n📦 Total : ${r.total}\n✅ Succès : ${r.livrees}\n📈 Taux : ${r.tauxSucces}%\n💰 Volume : ${(r.volume||0).toLocaleString()} FCFA\n\n— Livraison Pro 🇨🇮`;window.open('https://wa.me/?text='+encodeURIComponent(msg))}
+
+function renderStatsL(){
+  const total=MISSIONS.length;const livres=MISSIONS.filter(m=>m.status==='livre').length;const ca=MISSIONS.filter(m=>m.status==='livre').reduce((a,m)=>a+(parseInt(m.frais)||0),0);
+  const el=document.getElementById('l-stats');if(!el)return;
+  el.innerHTML=`<div class="rr"><span style="color:var(--gris)">Total missions</span><span style="font-weight:700">${total}</span></div><div class="rr"><span style="color:var(--gris)">Livrées</span><span style="font-weight:700;color:var(--vt)">${livres}</span></div><div class="rr"><span style="color:var(--gris)">Taux de succès</span><span style="font-weight:700">${total?Math.round(livres/total*100):0}%</span></div><div class="rr"><span style="color:var(--gris)">Chiffre d'affaires</span><span style="font-weight:800;color:var(--or);font-size:15px">${ca.toLocaleString()} FCFA</span></div>`;
+  const pz=document.getElementById('l-plan');
+  if(pz)pz.innerHTML=`<div style="background:linear-gradient(135deg,var(--noir),#1c1c2e);border-radius:var(--r);padding:16px;margin-bottom:12px;color:#fff"><div style="font-size:10px;opacity:.35;font-weight:700;text-transform:uppercase;margin-bottom:5px">PLAN ACTUEL</div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:3px">${USER.plan==='pro'?'Pro ✅':'Gratuit 🎁'}</div><div style="font-size:12px;opacity:.45;margin-bottom:14px">1 mois gratuit — accès complet</div>${USER.plan!=='pro'?`<div style="background:var(--or);border-radius:9px;padding:11px 14px;cursor:pointer" onclick="toast('📲 Contactez-nous sur WhatsApp pour passer Pro','or')"><div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800">🚀 Passer Pro — 2 000 FCFA/mois</div></div>`:''}</div>`;
+}
+
+function demanderVerification(){
+  const msg=`🪪 *LIVRAISON PRO — Demande de vérification*\n\nBonjour !\n\nJe souhaite faire vérifier mon identité.\n\n👤 Nom : ${USER.nom}\n🆔 ID : ${USER.id}\n📱 Tel : ${USER.tel}\n\nJe vais vous envoyer ma photo de profil et ma pièce d'identité.\n\nMerci !`;
+  window.open('https://wa.me/33753902323?text='+encodeURIComponent(msg));
+  toast('📲 Message envoyé — envoyez vos documents en réponse','vt');
+}
+
+// ── VISITE GUIDÉE ─────────────────────────────────────────
+let visitePage=0;
+function getEtapes(){
+  const isMarchand=USER?.role==='marchand';
+  return[
+    {icon:'🇨🇮',label:'Livraison Pro',title:'Pourquoi Livraison Pro ?',
+     text:isMarchand
+      ?'Avant Livraison Pro :\n❌ Votre cliente appelle 10 fois pour savoir où est son colis\n❌ En cas de problème — personne n\'a de preuve\n❌ Le livreur oublie, perd le papier\n\nAvec Livraison Pro :\n✅ La cliente suit son colis sur son téléphone\n✅ Chaque livraison a une preuve automatique\n✅ Vous gérez tout depuis votre téléphone\n\nSimple. Rapide. Professionnel.'
+      :'Avant Livraison Pro :\n❌ La vendeuse dit que tu n\'as pas livré — tu n\'as aucune preuve\n❌ Tu cherches des clients mais personne ne te connaît\n❌ Tes gains du mois ? Tu ne sais pas exactement\n\nAvec Livraison Pro :\n✅ Chaque livraison génère une preuve automatique\n✅ Les marchands te trouvent dans le catalogue\n✅ Tu vois ton chiffre d\'affaires en temps réel\n\nSimple. Rapide. Professionnel.',
+     demo:null},
+    {icon:isMarchand?'➕':'📋',label:'Étape 1 sur 5',
+     title:isMarchand?'Vous créez une livraison':'Vous recevez une mission',
+     text:isMarchand?'En 30 secondes vous créez une livraison. Nom de la cliente, adresse, prix, mode de paiement. Votre livreur reçoit la demande immédiatement sur WhatsApp.':'Le marchand crée une livraison et vous envoie la demande sur WhatsApp. Vous la voyez dans Missions. Acceptez en 1 tap.',
+     demo:{type:'mission'}},
+    {icon:'📦',label:'Étape 2 sur 5',
+     title:isMarchand?'Votre livreur récupère le colis':'Vous récupérez le colis',
+     text:isMarchand?'Votre livreur accepte la mission et se déplace chez vous. Il clique "Colis récupéré". Vous et votre cliente êtes notifiés immédiatement.':'Vous allez chez le marchand. Vous prenez le colis. Vous cliquez "Colis récupéré". Le marchand et la cliente le savent immédiatement.',
+     demo:{type:'enroute'}},
+    {icon:'🔗',label:'Étape 3 sur 5',title:'La cliente suit en temps réel',
+     text:'Quand le livreur part en livraison, la cliente reçoit un lien de suivi. Elle voit exactement où est son colis. Plus d\'appels, plus de stress.',
+     demo:{type:'tracking'}},
+    {icon:'📄',label:'Étape 4 sur 5',title:'La preuve est générée automatiquement',
+     text:isMarchand?'À chaque livraison confirmée, un bon numérique est créé. Date, heure, mode de paiement. Votre preuve en cas de litige.':'Quand vous confirmez la livraison, un bon est généré automatiquement. C\'est votre preuve en cas de litige.',
+     demo:{type:'bon'}},
+    {icon:'💰',label:'Étape 5 sur 5',title:'Combien ça coûte ?',text:'',demo:{type:'cout'}}
+  ];
+}
+
+function lancerVisite(){visitePage=0;document.getElementById('visite').style.display='block';document.body.style.overflow='hidden';renderVisitePage()}
+
+function renderVisitePage(){
+  const etapes=getEtapes();const e=etapes[visitePage];const total=etapes.length;
+  document.getElementById('vp-bar').innerHTML=etapes.map((_,i)=>`<div class="vp-dot ${i<visitePage?'done':i===visitePage?'active':''}"></div>`).join('');
+  let demoHtml='';
+  if(e.demo?.type==='mission')demoHtml=`<div class="vc-demo"><div class="vc-demo-title">APERÇU — MISSION</div><div class="demo-mission"><div class="demo-id">LP-001</div><div class="demo-dest">Fatou Traoré</div><div class="demo-addr">📍 Cocody Angré, Résidence Soleil</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px"><span style="background:#E5E7EB;color:#6B7280;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">⏳ En attente</span><span style="font-size:11px;color:rgba(255,255,255,0.4)">Wave · 1 500 FCFA</span></div></div></div>`;
+  else if(e.demo?.type==='enroute')demoHtml=`<div class="vc-demo"><div class="vc-demo-title">APERÇU — STATUTS</div><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(0,154,68,0.1);border-radius:8px"><span style="font-size:16px">✅</span><span style="font-size:12px;color:#4ADE80;font-weight:600">Accepté par le livreur</span></div><div style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(0,154,68,0.1);border-radius:8px"><span style="font-size:16px">📦</span><span style="font-size:12px;color:#4ADE80;font-weight:600">Colis récupéré — 09:30</span></div><div style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(247,127,0,0.15);border-radius:8px;border:1px solid rgba(247,127,0,0.3)"><span style="font-size:16px">🛵</span><span style="font-size:12px;color:#FBA94C;font-weight:700">En route → Cocody — 10:15</span></div></div></div>`;
+  else if(e.demo?.type==='tracking')demoHtml=`<div class="vc-demo"><div class="vc-demo-title">VUE CLIENTE — LIEN DE SUIVI</div><div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:8px 12px;font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:10px">🔗 livraison-pro.app?track=LP-001</div>${[{l:'📋 Demande créée',t:'09:00',d:true},{l:'✅ Acceptée',t:'09:15',d:true},{l:'📦 Colis récupéré',t:'10:30',d:true},{l:'🛵 En route',t:'11:00',d:true},{l:'✅ Livrée',t:'',d:false}].map(t=>`<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.06)"><div style="width:20px;height:20px;border-radius:50%;background:${t.d?'#009A44':'rgba(255,255,255,0.1)'};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;color:#fff">${t.d?'✓':'○'}</div><div><div style="font-size:12px;font-weight:600;color:${t.d?'#fff':'rgba(255,255,255,0.3)'}">${t.l}</div>${t.t?`<div style="font-size:10px;color:rgba(255,255,255,0.3)">${t.t}</div>`:''}</div></div>`).join('')}</div>`;
+  else if(e.demo?.type==='bon')demoHtml=`<div class="vc-demo"><div class="vc-demo-title">BON DE LIVRAISON AUTOMATIQUE</div><div class="demo-bon"><div class="demo-bon-title">📄 BON-LP-001</div><div class="demo-bon-row"><span>Destinataire</span><span style="color:#fff">Fatou Traoré</span></div><div class="demo-bon-row"><span>Mode paiement</span><span style="color:#4ADE80;font-weight:700">Wave</span></div><div class="demo-bon-row"><span>Frais</span><span style="color:#4ADE80;font-weight:700">1 500 FCFA</span></div><div style="background:rgba(0,154,68,0.2);border-radius:6px;padding:8px;text-align:center;margin-top:10px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#4ADE80">LIVRÉ ✅ — 11h32</div></div></div>`;
+  else if(e.demo?.type==='cout')demoHtml=`<div class="cout-card"><div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--or);margin-bottom:8px">GRATUIT</div><div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:14px">Pendant tout votre premier mois</div><div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:2">✅ Pas de carte bancaire<br>✅ Pas de surprise<br>✅ Accès complet<br>✅ Après votre 1er mois, vous choisissez</div><div style="margin-top:14px;padding:10px;background:rgba(247,127,0,0.15);border-radius:8px;font-size:13px;color:var(--or);font-weight:600">Livraison Pro ne gagne que si vous livrez 🇨🇮</div></div>`;
+
+  const isLast=visitePage===total-1;
+  const textHtml=e.text.split('\n').map(l=>l?`<div style="margin-bottom:5px">${l}</div>`:'').join('');
+
+  document.getElementById('vc').innerHTML=`<div class="vc-icon">${e.icon}</div><div class="vc-label">${e.label}</div><div class="vc-title">${e.title}</div><div class="vc-text">${textHtml}</div>${demoHtml||''}`;
+
+  document.getElementById('vn').innerHTML=`
+    ${visitePage>0?`<button class="vn-btn secondary" onclick="visitePrev()">← Retour</button>`:''}
+    ${!isLast
+      ?`<button class="vn-btn primary" onclick="visiteNext()">Suivant →</button>`
+      :`<div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <div class="reset-screen">
+            <div style="font-size:40px;margin-bottom:10px">🚀</div>
+            <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:8px">Prêt à commencer ?</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6">Vous avez vu comment ça marche. Faites votre première vraie livraison maintenant.</div>
+          </div>
+          <button class="vn-btn primary" onclick="finirVisite()">✅ Oui, je commence !</button>
+          <button class="vn-btn secondary" onclick="visitePage=0;renderVisitePage()">↩️ Revoir la visite</button>
+        </div>`}`;
+}
+
+function visiteNext(){if(visitePage<getEtapes().length-1){visitePage++;renderVisitePage()}}
+function visitePrev(){if(visitePage>0){visitePage--;renderVisitePage()}}
+function finirVisite(){
+  VISITE_DONE=true;localStorage.setItem('lp_visite','true');
+  document.getElementById('visite').style.display='none';document.body.style.overflow='';
+  const vl=document.getElementById('visite-btn-l');const vm=document.getElementById('visite-btn-m');
+  if(vl)vl.style.display='none';if(vm)vm.style.display='none';
+  toast('🎉 Eh voilà ! Votre compte est maintenant prêt. Bonne première livraison ! 🇨🇮','vt',5000);
+}
+
+// ── TRACKING PUBLIC ───────────────────────────────────────
+async function showPublicTracking(id){
+  document.getElementById('splash').style.display='none';
+  document.body.style.background='#f4f5f7';
+  document.body.innerHTML+=`<div id="pub-ld" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'DM Sans',sans-serif"><div style="width:32px;height:32px;border:3px solid #E5E7EB;border-top-color:#F77F00;border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px"></div><div style="font-size:13px;color:#6B7280">Chargement du suivi...</div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div>`;
+  const res=await api({action:'trackMission',id});
+  document.getElementById('pub-ld')?.remove();
+  if(!res.ok||!res.mission){document.body.innerHTML=`<div style="max-width:430px;margin:0 auto;padding:60px 24px;text-align:center;font-family:'DM Sans',sans-serif"><div style="font-size:48px;margin-bottom:16px">🔍</div><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:8px">Introuvable</div><div style="color:#6B7280;font-size:14px">Aucune livraison pour "${id}"</div></div>`;return}
+  const m=res.mission,tl=res.timeline||[],bon=res.bon,alertes=res.alertes||[];
+  const ST2={attente:{l:'⏳ En attente',bg:'#E5E7EB',c:'#6B7280'},accepte:{l:'✅ Accepté',bg:'#D4F5E2',c:'#007A35'},recupere:{l:'📦 Récupéré',bg:'#FFF0DC',c:'#D96B00'},enroute:{l:'🛵 En route',bg:'#FFF0DC',c:'#D96B00'},livre:{l:'✅ Livré',bg:'#D4F5E2',c:'#007A35'},echec:{l:'❌ Échec',bg:'#FEE2E2',c:'#DC2626'},annule:{l:'🚫 Annulé',bg:'#FEE2E2',c:'#DC2626'}};
+  const s=ST2[m.status]||ST2.attente;
+  document.body.innerHTML=`<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <div style="max-width:430px;margin:0 auto;padding:20px;font-family:'DM Sans',sans-serif;padding-bottom:40px">
+    <div style="text-align:center;margin-bottom:16px"><div style="display:flex;width:40px;height:28px;border-radius:5px;overflow:hidden;margin:0 auto 10px"><div style="flex:1;background:#F77F00"></div><div style="flex:1;background:#fff"></div><div style="flex:1;background:#009A44"></div></div><div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#0D0D0D">Livraison Pro 🇨🇮</div></div>
+    <div style="background:linear-gradient(135deg,#0D0D0D,#1c2a1c);border-radius:16px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden"><div style="font-size:64px;position:absolute;right:-6px;bottom:-6px;opacity:.05">🛵</div><div style="font-size:9px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">SUIVI DE LIVRAISON</div><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:10px">${m.id}</div><div style="display:inline-flex;align-items:center;background:${s.bg};color:${s.c};font-weight:700;font-size:11px;padding:6px 12px;border-radius:20px">${s.l}</div></div>
+    ${alertes.length?`<div style="background:#FEE2E2;border:1.5px solid rgba(220,38,38,.2);border-radius:10px;padding:11px 13px;margin-bottom:12px"><div style="font-size:12px;color:#DC2626;font-weight:600">🚨 ${alertes[0].type} — ${alertes[0].description}</div></div>`:''}
+    <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)">
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">👤 Votre livraison</div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Destinataire</span><span style="font-weight:700">${m.destNom||m.dest_nom}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Adresse</span><span style="font-weight:600;text-align:right;max-width:54%">${m.adresse}, ${m.commune}</span></div>
+      ${m.modePaiement||m.mode_paiement?`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Paiement</span><span style="font-weight:700;color:#009A44">${m.modePaiement||m.mode_paiement}</span></div>`:''}
+      <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px"><span style="color:#6B7280">Envoyé par</span><span style="font-weight:600">${m.vendeuseNom||m.vendeuse_nom}</span></div>
+    </div>
+    ${tl.length?`<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)"><div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">📍 Suivi en temps réel</div>${tl.map(t=>`<div style="display:flex;gap:11px;padding:8px 0;border-bottom:1px solid #E5E7EB"><div style="width:22px;height:22px;border-radius:50%;background:#009A44;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;flex-shrink:0">✓</div><div><div style="font-size:12px;font-weight:600">${t.label}</div><div style="font-size:10px;color:#6B7280;margin-top:1px">${t.time}</div></div></div>`).join('')}</div>`:''}
+    ${bon?`<div style="background:linear-gradient(135deg,#f8fffe,#f0faf5);border:2px solid #D4F5E2;border-radius:14px;padding:16px;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#007A35;margin-bottom:10px">📄 Bon de livraison</div>${bon.modePaiement?`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,154,68,.1);font-size:12px"><span style="color:#6B7280">Mode paiement</span><span style="font-weight:700;color:#009A44">${bon.modePaiement}</span></div>`:''}<div style="background:#D4F5E2;border-radius:6px;padding:7px;text-align:center;margin-top:10px;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:#007A35">LIVRÉ ✅</div></div>`:''}
+    <div style="text-align:center;padding:16px 0;color:#6B7280;font-size:11px"><div style="font-family:'Syne',sans-serif;font-weight:800;color:#F77F00;font-size:13px;margin-bottom:3px">Livraison Pro 🇨🇮</div>La livraison professionnelle en Côte d'Ivoire</div>
+  </div>`;
+}
+</script>
+</body>
+</html>
