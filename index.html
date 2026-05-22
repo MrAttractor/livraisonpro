@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#F77F00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Livraison Pro">
+<title>Livraison Pro 🇨🇮</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --or:#F77F00;--or-d:#D96B00;--or-l:#FFF0DC;
+  --vt:#009A44;--vt-d:#007A35;--vt-l:#D4F5E2;
+  --rouge:#DC2626;--rouge-l:#FEE2E2;
+  --noir:#0D0D0D;--gris:#6B7280;--gris-l:#F4F5F7;--gris-b:#E5E7EB;
+  --blanc:#FFFFFF;
+  --sh:0 2px 16px rgba(13,13,13,0.08);--r:16px;--r-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:999;background:var(--noir);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;transition:opacity 0.4s}
+.splash-flag{display:flex;width:96px;height:64px;border-radius:10px;overflow:hidden;box-shadow:0 0 40px rgba(247,127,0,0.5);animation:fp 2s ease infinite alternate}
+@keyframes fp{from{transform:scale(1)}to{transform:scale(1.06)}}
+.fs{flex:1}.fo{background:#F77F00}.fw{background:#fff}.fg{background:#009A44}
+.splash-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.5px;animation:fu 0.7s 0.3s both}
+.splash-sub{font-size:13px;color:rgba(255,255,255,0.4);animation:fu 0.7s 0.5s both}
+.splash-dots{display:flex;gap:6px;animation:fu 0.7s 0.7s both}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2)}
+.dot.active{background:var(--or);animation:dp 1.2s ease infinite}
+.dot:nth-child(2){animation-delay:0.2s}.dot:nth-child(3){animation-delay:0.4s}
+@keyframes dp{0%,100%{opacity:0.3}50%{opacity:1;transform:scale(1.3)}}
+@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* LOADING OVERLAY */
+#loading{position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;backdrop-filter:blur(4px)}
+#loading.show{display:flex}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--gris-b);border-top-color:var(--or);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--gris);font-weight:600}
+
+/* ONBOARDING */
+#onboarding{display:none;min-height:100vh;background:var(--noir)}
+.ob-header{background:linear-gradient(180deg,rgba(247,127,0,0.12) 0%,transparent 100%);padding:52px 24px 24px;text-align:center}
+.ob-flag{display:flex;width:54px;height:36px;border-radius:6px;overflow:hidden;margin:0 auto 16px}
+.ob-flag .fs{flex:1}
+.ob-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#fff;margin-bottom:6px}
+.ob-sub{font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6}
+.ob-body{padding:24px}
+.ob-label{font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:7px;display:block}
+.ob-input{width:100%;padding:14px 16px;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;transition:border-color 0.2s;margin-bottom:14px}
+.ob-input:focus{border-color:var(--or)}
+.ob-input::placeholder{color:rgba(255,255,255,0.2)}
+.ob-select{width:100%;padding:14px 16px;background:rgba(255,255,255,0.07);border:1.5px solid rgba(255,255,255,0.1);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:#fff;outline:none;margin-bottom:14px;-webkit-appearance:none}
+.ob-select option{background:#1a1a1a}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.role-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.08);border-radius:var(--r);padding:20px 14px;text-align:center;cursor:pointer;transition:all 0.2s}
+.role-card.selected{border-color:var(--or);background:rgba(247,127,0,0.1)}
+.role-icon{font-size:30px;margin-bottom:8px}
+.role-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff}
+.role-desc{font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;line-height:1.4}
+.trial-banner{background:rgba(0,154,68,0.12);border:1px solid rgba(0,154,68,0.25);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:center}
+.trial-text{font-size:13px;color:rgba(255,255,255,0.75);line-height:1.5}
+.trial-text strong{color:var(--vt)}
+.ob-btn{width:100%;padding:16px;background:var(--or);color:#fff;border:none;border-radius:var(--r-sm);font-family:'Syne',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s}
+.ob-btn:active{background:var(--or-d);transform:scale(0.98)}
+.ob-btn:disabled{opacity:0.6;cursor:not-allowed}
+.ob-error{background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.25);border-radius:8px;padding:10px 14px;font-size:13px;color:#FCA5A5;margin-bottom:14px;display:none}
+
+/* APP SHELL */
+#app{display:none}
+.app-header{background:var(--blanc);padding:14px 18px 10px;border-bottom:1px solid var(--gris-b);position:sticky;top:0;z-index:50;box-shadow:var(--sh)}
+.hd-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:8px}
+.brand-flag{display:flex;width:24px;height:16px;border-radius:3px;overflow:hidden}
+.brand-flag .fs{flex:1}
+.brand-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--noir)}
+.hd-right{display:flex;align-items:center;gap:8px}
+.sync-btn{width:32px;height:32px;border-radius:50%;background:var(--gris-l);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:transform 0.3s}
+.sync-btn.spinning{animation:spin 1s linear infinite}
+.hd-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.hd-info{text-align:right}
+.hd-name{font-size:12px;font-weight:700;color:var(--noir)}
+.hd-id{font-size:10px;color:var(--gris)}
+.tabs{display:flex;gap:3px;background:var(--gris-l);padding:3px;border-radius:9px}
+.tab{flex:1;padding:7px 2px;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--gris);cursor:pointer;border-radius:7px;transition:all 0.2s;white-space:nowrap}
+.tab.active{background:var(--blanc);color:var(--or);box-shadow:0 1px 6px rgba(0,0,0,0.1)}
+
+/* SCREENS */
+.screen{display:none;padding:18px;padding-bottom:100px;animation:si 0.25s ease}
+.screen.active{display:block}
+@keyframes si{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--blanc);border-radius:var(--r);padding:18px;margin-bottom:14px;box-shadow:var(--sh)}
+.card-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--noir);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.ci{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ci-or{background:var(--or-l)}.ci-vt{background:var(--vt-l)}.ci-rouge{background:var(--rouge-l)}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.sc{background:var(--blanc);border-radius:var(--r);padding:16px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+.sc.or::before{background:var(--or)}.sc.vt::before{background:var(--vt)}.sc.bl::before{background:#3B82F6}.sc.pp::before{background:#8B5CF6}
+.sv{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--noir);line-height:1}
+.sl{font-size:11px;color:var(--gris);margin-top:4px}
+.sd{font-size:11px;font-weight:600;margin-top:5px;color:var(--vt)}
+
+/* TRIAL */
+.trial-counter{background:linear-gradient(135deg,var(--noir),#1c1c2e);border-radius:var(--r);padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.tc-label{font-size:11px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.tc-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;margin-top:2px}
+.tc-bar-wrap{flex:1;margin:0 14px;height:6px;background:rgba(255,255,255,0.12);border-radius:3px;overflow:hidden}
+.tc-bar{height:100%;background:linear-gradient(90deg,var(--or),var(--vt));border-radius:3px;transition:width 0.5s}
+.tc-upgrade{background:var(--or);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+/* MISSIONS */
+.mission-item{background:var(--blanc);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06);cursor:pointer;transition:transform 0.15s;position:relative;overflow:hidden}
+.mission-item:active{transform:scale(0.98)}
+.mission-item.alerte::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rouge)}
+.mi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.mi-id{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
+.mi-status{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
+.mi-dest{font-size:13px;font-weight:600;margin-bottom:2px}
+.mi-addr{font-size:11px;color:var(--gris)}
+.mi-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--gris-b)}
+.mi-frais{font-size:14px;font-weight:700;color:var(--vt)}
+
+/* BUTTONS */
+.btn{padding:12px 18px;border:none;border-radius:var(--r-sm);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.btn:active{transform:scale(0.97)}
+.btn:disabled{opacity:0.6;cursor:not-allowed}
+.btn-or{background:var(--or);color:#fff}.btn-vt{background:var(--vt);color:#fff}.btn-rouge{background:var(--rouge);color:#fff}.btn-ghost{background:var(--gris-b);color:var(--noir);font-weight:600}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:8px;width:auto}
+
+/* FORM */
+.fg-group{margin-bottom:12px}
+.fg-label{font-size:11px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px}
+.fg-input,.fg-select{width:100%;padding:12px 14px;border:2px solid var(--gris-b);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--noir);background:var(--blanc);outline:none;transition:border-color 0.2s}
+.fg-input:focus,.fg-select:focus{border-color:var(--or)}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg-error{font-size:11px;color:var(--rouge);margin-top:4px;display:none}
+
+/* TIMELINE */
+.timeline{display:flex;flex-direction:column}
+.tl-item{display:flex;gap:14px;padding:10px 0;position:relative}
+.tl-item:not(:last-child)::after{content:'';position:absolute;left:12px;top:32px;width:2px;bottom:-10px;background:var(--gris-b)}
+.tl-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;z-index:1}
+.tl-done{background:var(--vt);color:#fff}
+.tl-current{background:var(--or);color:#fff;animation:pc 1.5s ease infinite}
+@keyframes pc{0%,100%{box-shadow:0 0 0 0 rgba(247,127,0,0.4)}50%{box-shadow:0 0 0 7px rgba(247,127,0,0)}}
+.tl-content{padding-top:2px;flex:1}
+.tl-title{font-size:13px;font-weight:600}
+.tl-time{font-size:11px;color:var(--gris);margin-top:2px}
+
+/* BON */
+.bon{background:linear-gradient(135deg,#f8fffe,#f0faf5);border:2px solid var(--vt-l);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.bon-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:2px dashed var(--vt-l)}
+.bon-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:var(--vt-d)}
+.bon-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(0,154,68,0.1);font-size:13px}
+.bon-row:last-child{border-bottom:none}
+.bon-key{color:var(--gris)}
+.bon-val{font-weight:600;text-align:right;max-width:58%}
+.bon-stamp{background:var(--vt-l);border-radius:6px;padding:8px 14px;text-align:center;margin-top:12px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--vt-d)}
+
+/* ALERTE BAR */
+.alerte-bar{background:var(--rouge-l);border:1.5px solid rgba(220,38,38,0.2);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start}
+.alerte-icon{font-size:18px;flex-shrink:0}
+.alerte-text{font-size:13px;color:var(--rouge);font-weight:500;line-height:1.5}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;display:none;align-items:flex-end;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--blanc);border-radius:22px 22px 0 0;padding:22px 18px 36px;width:100%;max-height:92vh;overflow-y:auto;animation:mup 0.28s ease}
+@keyframes mup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--gris-b);border-radius:2px;margin:0 auto 18px}
+.modal-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;margin-bottom:18px}
+
+/* TOAST */
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--noir);color:#fff;padding:11px 18px;border-radius:22px;font-size:13px;font-weight:600;z-index:999;transition:transform 0.28s ease;white-space:nowrap;max-width:88%}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--vt)}
+.toast.error{background:var(--rouge)}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--blanc);border-top:1px solid var(--gris-b);display:flex;padding:8px 0 18px;z-index:100;box-shadow:0 -3px 20px rgba(0,0,0,0.07)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0;cursor:pointer;border:none;background:transparent}
+.nav-icon{font-size:20px;transition:transform 0.2s}
+.nav-label{font-size:9px;font-weight:600;color:var(--gris);transition:color 0.2s}
+.nav-item.active .nav-label{color:var(--or)}
+.nav-item.active .nav-icon{transform:scale(1.15)}
+
+/* FAB */
+.fab{position:fixed;bottom:86px;right:18px;width:52px;height:52px;border-radius:50%;background:var(--or);color:#fff;font-size:22px;border:none;cursor:pointer;box-shadow:0 5px 18px rgba(247,127,0,0.4);display:flex;align-items:center;justify-content:center;z-index:90;transition:transform 0.2s}
+.fab:active{transform:scale(0.9)}
+
+/* SECTION TITLE */
+.st{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;margin-top:4px}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 20px;color:var(--gris)}
+.empty-icon{font-size:40px;margin-bottom:10px}
+.empty-text{font-size:13px;line-height:1.6}
+
+/* RAPPORT */
+.rapport-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--gris-b);font-size:13px}
+.rapport-row:last-child{border-bottom:none}
+
+/* OFFLINE BANNER */
+.offline-banner{background:#FEF3C7;border-bottom:1px solid #FDE68A;padding:8px 16px;text-align:center;font-size:12px;font-weight:600;color:#92400E;display:none}
+.offline-banner.show{display:block}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-flag"><div class="fs fo"></div><div class="fs fw"></div><div class="fs fg"></div></div>
+  <div class="splash-title">Livraison Pro</div>
+  <div class="splash-sub">Connexion en cours...</div>
+  <div class="splash-dots">
+    <div class="dot active"></div><div class="dot active"></div><div class="dot active"></div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Chargement...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="ob-header">
+    <div class="ob-flag"><div class="fs fo"></div><div class="fs fw"></div><div class="fs fg"></div></div>
+    <div class="ob-title">Bienvenue 👋</div>
+    <div class="ob-sub">Créez votre compte en 30 secondes.<br>7 jours offerts, sans engagement.</div>
+  </div>
+  <div class="ob-body">
+    <div class="role-grid">
+      <div class="role-card" id="role-vendeuse" onclick="selectRole('vendeuse')">
+        <div class="role-icon">🛍️</div>
+        <div class="role-name">Vendeuse</div>
+        <div class="role-desc">J'envoie des colis à mes clientes</div>
+      </div>
+      <div class="role-card" id="role-livreur" onclick="selectRole('livreur')">
+        <div class="role-icon">🛵</div>
+        <div class="role-name">Livreur</div>
+        <div class="role-desc">Je livre pour des vendeuses</div>
+      </div>
+    </div>
+    <span class="ob-label">Prénom et nom complet</span>
+    <input class="ob-input" id="ob-nom" placeholder="Ex: Aminata Koné" />
+    <span class="ob-label">Numéro WhatsApp</span>
+    <input class="ob-input" id="ob-tel" placeholder="+225 07 XX XX XX XX" type="tel" />
+    <div class="ob-error" id="ob-error">Format invalide. Exemple : +225 07 12 34 56 78</div>
+    <span class="ob-label">Commune principale</span>
+    <select class="ob-select" id="ob-commune">
+      <option value="">Choisir...</option>
+      <option>Cocody</option><option>Marcory</option><option>Plateau</option>
+      <option>Yopougon</option><option>Abobo</option><option>Adjamé</option>
+      <option>Koumassi</option><option>Port-Bouët</option><option>Treichville</option>
+      <option>Attecoubé</option><option>Bingerville</option><option>Songon</option>
+    </select>
+    <div class="trial-banner">
+      <span style="font-size:22px">🎁</span>
+      <div class="trial-text"><strong>7 jours gratuits</strong> — accès complet.<br>Après : 2 000 FCFA/mois seulement.</div>
+    </div>
+    <button class="ob-btn" id="ob-submit" onclick="creerCompte()">Créer mon compte →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="offline-banner" id="offline-banner">⚠️ Mode hors-ligne — données en cache</div>
+  <div class="app-header">
+    <div class="hd-top">
+      <div class="brand">
+        <div class="brand-flag"><div class="fs fo"></div><div class="fs fw"></div><div class="fs fg"></div></div>
+        <div class="brand-name">Livraison Pro</div>
+      </div>
+      <div class="hd-right">
+        <button class="sync-btn" id="sync-btn" onclick="syncData()" title="Actualiser">🔄</button>
+        <div>
+          <div class="hd-info">
+            <div class="hd-name" id="hd-name">—</div>
+            <div class="hd-id" id="hd-id">—</div>
+          </div>
+        </div>
+        <div class="hd-avatar" id="hd-avatar">?</div>
+      </div>
+    </div>
+    <div class="tabs" id="tabs-container"></div>
+  </div>
+
+  <!-- LIVREUR -->
+  <div id="livreur-screens">
+    <div class="screen active" id="sc-l-dashboard">
+      <div id="trial-zone-l"></div>
+      <div class="sg">
+        <div class="sc or"><div class="sv" id="l-today">0</div><div class="sl">Missions aujourd'hui</div><div class="sd" id="l-livrees-today">0 livrées</div></div>
+        <div class="sc vt"><div class="sv" id="l-gains">0</div><div class="sl">Gains FCFA</div><div class="sd">Total</div></div>
+        <div class="sc bl"><div class="sv" id="l-enroute">0</div><div class="sl">En route</div><div class="sd">En cours</div></div>
+        <div class="sc pp"><div class="sv" id="l-alertes-count">0</div><div class="sl">Alertes</div><div class="sd">Non lues</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ci ci-or">📋</span>Missions du jour</div>
+        <div id="l-missions-today"></div>
+      </div>
+    </div>
+    <div class="screen" id="sc-l-missions">
+      <div class="st">Toutes mes missions</div>
+      <div id="l-all-missions"></div>
+    </div>
+    <div class="screen" id="sc-l-alertes">
+      <div class="card">
+        <div class="card-title"><span class="ci ci-rouge">🚨</span>Signaler un incident</div>
+        <div class="fg-group">
+          <label class="fg-label">Mission concernée</label>
+          <select class="fg-select" id="l-alerte-mission"><option value="">Choisir...</option></select>
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Type d'incident</label>
+          <select class="fg-select" id="l-alerte-type">
+            <option value="">Choisir...</option>
+            <option value="retard">🕐 Retard prévu</option>
+            <option value="accident">🚗 Accident / panne</option>
+            <option value="adresse introuvable">📍 Adresse introuvable</option>
+            <option value="cliente absente">🚪 Cliente absente</option>
+            <option value="URGENT — intervention requise">🚨 URGENT — intervention vendeuse</option>
+            <option value="autre">📝 Autre</option>
+          </select>
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Description</label>
+          <input class="fg-input" id="l-alerte-desc" placeholder="Décrivez la situation..." />
+        </div>
+        <button class="btn btn-rouge" onclick="envoyerAlerteLibreur()">🚨 Envoyer l'alerte</button>
+      </div>
+      <div class="st">Mes alertes envoyées</div>
+      <div id="l-alertes-list"></div>
+    </div>
+    <div class="screen" id="sc-l-stats">
+      <div class="st">Mes performances</div>
+      <div class="card">
+        <div class="card-title"><span class="ci ci-or">📊</span>Statistiques globales</div>
+        <div id="l-stats-content"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Synchronisez pour voir vos stats</div></div></div>
+      </div>
+      <div id="plan-zone-l"></div>
+    </div>
+  </div>
+
+  <!-- VENDEUSE -->
+  <div id="vendeuse-screens" style="display:none">
+    <div class="screen active" id="sc-v-dashboard">
+      <div id="trial-zone-v"></div>
+      <div class="sg">
+        <div class="sc or"><div class="sv" id="v-total">0</div><div class="sl">Colis ce mois</div><div class="sd" id="v-livres">0 livrés</div></div>
+        <div class="sc vt"><div class="sv" id="v-gains">0</div><div class="sl">Frais FCFA</div><div class="sd">Ce mois</div></div>
+        <div class="sc bl"><div class="sv" id="v-enroute">0</div><div class="sl">En route</div><div class="sd">En cours</div></div>
+        <div class="sc pp"><div class="sv" id="v-alertes">0</div><div class="sl">Alertes</div><div class="sd">Actives</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="ci ci-or">📦</span>Livraisons récentes</div>
+        <div id="v-recent-list"></div>
+      </div>
+    </div>
+    <div class="screen" id="sc-v-nouvelle">
+      <div class="card">
+        <div class="card-title"><span class="ci ci-or">➕</span>Nouvelle livraison</div>
+        <div class="fg-group">
+          <label class="fg-label">Nom de la destinataire</label>
+          <input class="fg-input" id="v-dest" placeholder="Ex: Fatou Traoré" />
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Téléphone destinataire (WhatsApp)</label>
+          <input class="fg-input" id="v-dest-tel" placeholder="+225 07 XX XX XX XX" type="tel" />
+          <div class="fg-error" id="v-dest-tel-err">Format invalide. Ex: +225 07 12 34 56 78</div>
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Adresse de livraison</label>
+          <input class="fg-input" id="v-adresse" placeholder="Rue, quartier, point de repère..." />
+        </div>
+        <div class="fg-row">
+          <div class="fg-group">
+            <label class="fg-label">Commune</label>
+            <select class="fg-select" id="v-commune">
+              <option value="">Commune...</option>
+              <option>Cocody</option><option>Marcory</option><option>Plateau</option>
+              <option>Yopougon</option><option>Abobo</option><option>Adjamé</option>
+              <option>Koumassi</option><option>Port-Bouët</option><option>Treichville</option>
+              <option>Attecoubé</option><option>Bingerville</option><option>Songon</option>
+            </select>
+          </div>
+          <div class="fg-group">
+            <label class="fg-label">Frais (FCFA)</label>
+            <input class="fg-input" id="v-frais" placeholder="1500" type="number" />
+          </div>
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Description du colis</label>
+          <input class="fg-input" id="v-desc" placeholder="Vêtements × 2, fragile..." />
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Date de livraison souhaitée</label>
+          <input class="fg-input" id="v-date" type="date" />
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Nom du livreur</label>
+          <input class="fg-input" id="v-livreur-nom" placeholder="Nom de votre livreur" />
+        </div>
+        <button class="btn btn-or" id="btn-creer-livraison" onclick="creerLivraison()" style="margin-top:6px">✅ Envoyer la demande au livreur</button>
+      </div>
+    </div>
+    <div class="screen" id="sc-v-alertes">
+      <div class="card">
+        <div class="card-title"><span class="ci ci-rouge">🚨</span>Envoyer une alerte</div>
+        <div class="fg-group">
+          <label class="fg-label">Livraison concernée</label>
+          <select class="fg-select" id="v-alerte-livraison"><option value="">Choisir...</option></select>
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Type d'alerte</label>
+          <select class="fg-select" id="v-alerte-type">
+            <option value="">Choisir...</option>
+            <option value="annulation">❌ Annulation de livraison</option>
+            <option value="URGENT — changement adresse">🚨 URGENT — changement d'adresse</option>
+            <option value="retard accepté">⏳ Retard accepté</option>
+            <option value="message">📝 Message au livreur</option>
+          </select>
+        </div>
+        <div class="fg-group">
+          <label class="fg-label">Message</label>
+          <input class="fg-input" id="v-alerte-msg" placeholder="Expliquez la situation..." />
+        </div>
+        <button class="btn btn-rouge" onclick="envoyerAlerteVendeuse()">🚨 Alerter livreur et cliente</button>
+      </div>
+      <div class="st">Alertes du livreur</div>
+      <div id="v-alertes-recues"></div>
+    </div>
+    <div class="screen" id="sc-v-rapport">
+      <div class="card">
+        <div class="card-title"><span class="ci ci-vt">📊</span>Rapport mensuel</div>
+        <div class="fg-group">
+          <label class="fg-label">Mois</label>
+          <select class="fg-select" id="v-rapport-mois">
+            <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+            <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+            <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+            <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+          </select>
+        </div>
+        <button class="btn btn-vt" onclick="genererRapport()">📊 Générer le rapport</button>
+      </div>
+      <div id="rapport-result"></div>
+      <div id="plan-zone-v"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav" id="bottom-nav"></div>
+  <button class="fab" id="fab-btn" onclick="showScreen('v-nouvelle')" style="display:none">＋</button>
+</div>
+
+<!-- MODAL MISSION -->
+<div class="modal-overlay" id="modal-mission">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="modal-mission-content"></div>
+    <button class="btn btn-ghost" onclick="closeModal('modal-mission')" style="margin-top:12px">Fermer</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG API
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbwIUivCZzqAkdZvvF2CgF5p2fSikYO-nz9Y1q3ydCoqXZ2HPq7Hd93beuNSlhppyPys/exec';
+
+// ============================================================
+// STATE
+// ============================================================
+let USER    = JSON.parse(localStorage.getItem('lp_user')     || 'null');
+let MISSIONS = JSON.parse(localStorage.getItem('lp_missions_cache') || '[]');
+let ALERTES  = JSON.parse(localStorage.getItem('lp_alertes_cache')  || '[]');
+let ONLINE   = navigator.onLine;
+
+// ============================================================
+// API HELPER
+// ============================================================
+async function api(params) {
+  const qs = new URLSearchParams(params).toString();
+  const url = API_URL + '?' + qs;
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    const text = await res.text();
+    return JSON.parse(text);
+  } catch(e) {
+    console.error('API error:', e);
+    return { ok: false, error: 'Connexion impossible. Vérifiez votre réseau.' };
+  }
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function toast(msg, type='', dur=3200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', dur);
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+function showLoading(txt='Chargement...') { document.getElementById('loading-text').textContent=txt; document.getElementById('loading').classList.add('show'); }
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+function validerTel(tel) {
+  const c = tel.replace(/\s/g,'');
+  return /^(\+225)?[0-9]{10}$/.test(c) || /^\+2250[0-9]{9}$/.test(c);
+}
+function formatTel(tel) {
+  const c = tel.replace(/\s/g,'').replace(/^00225/,'+225').replace(/^225/,'+225');
+  return c.startsWith('+') ? c : '+225'+c;
+}
+function now() { return new Date().toISOString(); }
+function fmtDate(iso) {
+  if(!iso) return '';
+  try { return new Date(iso).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+  catch(e) { return iso; }
+}
+
+const STATUS = {
+  attente:  {label:'⏳ En attente', bg:'#E5E7EB', color:'#6B7280'},
+  accepte:  {label:'✅ Accepté',    bg:'#D4F5E2', color:'#007A35'},
+  recupere: {label:'📦 Récupéré',   bg:'#FFF0DC', color:'#D96B00'},
+  enroute:  {label:'🛵 En route',   bg:'#FFF0DC', color:'#D96B00'},
+  livre:    {label:'✅ Livré',      bg:'#D4F5E2', color:'#007A35'},
+  echec:    {label:'❌ Échec',      bg:'#FEE2E2', color:'#DC2626'},
+  annule:   {label:'🚫 Annulé',     bg:'#FEE2E2', color:'#DC2626'},
+  retard:   {label:'🕐 Retard',     bg:'#FEF3C7', color:'#D97706'}
+};
+
+// ============================================================
+// SPLASH → ROUTING
+// ============================================================
+window.addEventListener('online',  () => { ONLINE=true;  document.getElementById('offline-banner').classList.remove('show'); });
+window.addEventListener('offline', () => { ONLINE=false; document.getElementById('offline-banner').classList.add('show'); });
+
+setTimeout(async () => {
+  // Check URL tracking public
+  const params = new URLSearchParams(window.location.search);
+  const trackId = params.get('track');
+  if(trackId) { showPublicTracking(trackId); return; }
+
+  document.getElementById('splash').style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('splash').style.display = 'none';
+    if(USER) { initApp(); }
+    else { document.getElementById('onboarding').style.display = 'block'; }
+  }, 400);
+}, 1800);
+
+// ============================================================
+// ONBOARDING
+// ============================================================
+let selectedRole = '';
+function selectRole(r) {
+  selectedRole = r;
+  document.getElementById('role-vendeuse').classList.toggle('selected', r==='vendeuse');
+  document.getElementById('role-livreur').classList.toggle('selected', r==='livreur');
+}
+
+async function creerCompte() {
+  const nom    = document.getElementById('ob-nom').value.trim();
+  const tel    = document.getElementById('ob-tel').value.trim();
+  const commune= document.getElementById('ob-commune').value;
+  const errEl  = document.getElementById('ob-error');
+  const btn    = document.getElementById('ob-submit');
+  errEl.style.display = 'none';
+
+  if(!selectedRole) { toast('❌ Choisissez votre rôle','error'); return; }
+  if(!nom) { toast('❌ Entrez votre nom complet','error'); return; }
+  if(!tel || !validerTel(tel)) { errEl.style.display='block'; return; }
+  if(!commune) { toast('❌ Choisissez votre commune','error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Création en cours...';
+  showLoading('Création de votre compte...');
+
+  const res = await api({ action:'createUser', role:selectedRole, nom, tel:formatTel(tel), commune });
+  hideLoading();
+  btn.disabled = false;
+  btn.textContent = 'Créer mon compte →';
+
+  if(!res.ok) { toast('❌ Erreur : '+res.error,'error'); return; }
+
+  USER = res.user;
+  localStorage.setItem('lp_user', JSON.stringify(USER));
+  document.getElementById('onboarding').style.display = 'none';
+  initApp();
+
+  const msg = res.exists
+    ? '👋 Bon retour ' + USER.nom.split(' ')[0] + ' !'
+    : '🎉 Bienvenue ' + USER.nom.split(' ')[0] + ' ! 7 jours offerts.';
+  toast(msg, 'success');
+}
+
+// ============================================================
+// APP INIT
+// ============================================================
+function initApp() {
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('hd-name').textContent = USER.nom.split(' ')[0];
+  document.getElementById('hd-id').textContent   = USER.id;
+  document.getElementById('hd-avatar').textContent = USER.nom[0].toUpperCase();
+  document.getElementById('hd-avatar').style.background = USER.role==='vendeuse'
+    ? 'linear-gradient(135deg,#009A44,#007A35)'
+    : 'linear-gradient(135deg,#F77F00,#D96B00)';
+
+  if(USER.role === 'livreur') {
+    document.getElementById('livreur-screens').style.display  = 'block';
+    document.getElementById('vendeuse-screens').style.display = 'none';
+    document.getElementById('fab-btn').style.display = 'none';
+    buildNav(['l-dashboard','l-missions','l-alertes','l-stats'],
+             ['🏠 Accueil','📦 Missions','🚨 Alertes','📊 Stats']);
+  } else {
+    document.getElementById('livreur-screens').style.display  = 'none';
+    document.getElementById('vendeuse-screens').style.display = 'block';
+    document.getElementById('fab-btn').style.display = 'flex';
+    buildNav(['v-dashboard','v-nouvelle','v-alertes','v-rapport'],
+             ['🏠 Accueil','➕ Nouveau','🚨 Alertes','📊 Rapport']);
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const dateEl = document.getElementById('v-date');
+  if(dateEl) dateEl.value = today;
+  const moisEl = document.getElementById('v-rapport-mois');
+  if(moisEl) moisEl.value = new Date().getMonth();
+
+  syncData();
+}
+
+// ============================================================
+// NAV
+// ============================================================
+function buildNav(screens, labels) {
+  document.getElementById('tabs-container').innerHTML =
+    screens.map((s,i) => `<button class="tab${i===0?' active':''}" onclick="showScreen('${s}')">${labels[i]}</button>`).join('');
+  document.getElementById('bottom-nav').innerHTML =
+    screens.map((s,i) => `<button class="nav-item${i===0?' active':''}" onclick="showScreen('${s}')"><span class="nav-icon">${labels[i].split(' ')[0]}</span><span class="nav-label">${labels[i].split(' ').slice(1).join(' ')}</span></button>`).join('');
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('sc-'+name);
+  if(el) el.classList.add('active');
+  const allScreens = USER.role==='livreur'
+    ? ['l-dashboard','l-missions','l-alertes','l-stats']
+    : ['v-dashboard','v-nouvelle','v-alertes','v-rapport'];
+  const idx = allScreens.indexOf(name);
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.nav-item').forEach((n,i) => n.classList.toggle('active', i===idx));
+  if(name==='l-alertes') fillAlerteMissions();
+  if(name==='v-alertes') fillAlerteVendeuseUI();
+  if(name==='l-stats')   renderStatsLivreur();
+  if(name==='v-rapport') { const m=document.getElementById('v-rapport-mois'); if(m) m.value=new Date().getMonth(); }
+}
+
+// ============================================================
+// SYNC
+// ============================================================
+async function syncData() {
+  const syncBtn = document.getElementById('sync-btn');
+  syncBtn.classList.add('spinning');
+  try {
+    // Dashboard stats
+    const dash = await api({ action:'getDashboard', userId:USER.id, role:USER.role });
+    if(dash.ok) {
+      renderDashboard(dash);
+      if(dash.recentMissions) {
+        MISSIONS = dash.recentMissions;
+        localStorage.setItem('lp_missions_cache', JSON.stringify(MISSIONS));
+      }
+    }
+    // Trial check
+    const trial = await api({ action:'checkTrial', id:USER.id });
+    if(trial.ok) renderTrial(trial);
+
+    // Alertes
+    const alertes = await api({ action:'getAlertes', nonLuSeulement:'false' });
+    if(alertes.ok) {
+      ALERTES = alertes.alertes || [];
+      localStorage.setItem('lp_alertes_cache', JSON.stringify(ALERTES));
+      renderAlertes();
+    }
+  } catch(e) {
+    toast('⚠️ Sync partielle — mode cache','');
+  }
+  syncBtn.classList.remove('spinning');
+}
+
+// ============================================================
+// RENDER DASHBOARD
+// ============================================================
+function renderDashboard(dash) {
+  const s = dash.stats;
+  if(!s) return;
+  if(USER.role === 'livreur') {
+    document.getElementById('l-today').textContent       = s.missionAujourdhui || 0;
+    document.getElementById('l-livrees-today').textContent = (s.livreesAujourdhui||0) + ' livrées';
+    document.getElementById('l-gains').textContent       = (s.fraisTotal||0).toLocaleString();
+    document.getElementById('l-enroute').textContent     = s.enRoute || 0;
+    document.getElementById('l-alertes-count').textContent = s.alertesActives || 0;
+  } else {
+    document.getElementById('v-total').textContent  = s.totalMissions || 0;
+    document.getElementById('v-livres').textContent = (s.livreesAujourdhui||0) + ' livrés';
+    document.getElementById('v-gains').textContent  = (s.fraisTotal||0).toLocaleString();
+    document.getElementById('v-enroute').textContent= s.enRoute || 0;
+    document.getElementById('v-alertes').textContent= s.alertesActives || 0;
+  }
+  renderMissions();
+}
+
+function renderTrial(trial) {
+  const pct = Math.max(0, (trial.joursRestants/7)*100);
+  const html = `<div class="trial-counter">
+    <div><div class="tc-label">Essai gratuit</div><div class="tc-val">${trial.joursRestants}j</div></div>
+    <div class="tc-bar-wrap"><div class="tc-bar" style="width:${pct}%"></div></div>
+    <button class="tc-upgrade" onclick="toast('💳 2 000 FCFA/mois — bientôt disponible')">Pro →</button>
+  </div>`;
+  const zL = document.getElementById('trial-zone-l');
+  const zV = document.getElementById('trial-zone-v');
+  if(zL) zL.innerHTML = html;
+  if(zV) zV.innerHTML = html;
+}
+
+// ============================================================
+// MISSIONS RENDER
+// ============================================================
+function renderMissions() {
+  const today = MISSIONS.filter(m => {
+    try { return new Date(m.createdAt).toDateString()===new Date().toDateString(); } catch(e){return false;}
+  });
+
+  if(USER.role === 'livreur') {
+    const todayEl = document.getElementById('l-missions-today');
+    const allEl   = document.getElementById('l-all-missions');
+    todayEl.innerHTML = today.length
+      ? today.map(renderMissionCard).join('')
+      : '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Aucune mission aujourd\'hui</div></div>';
+    allEl.innerHTML = MISSIONS.length
+      ? MISSIONS.map(renderMissionCard).join('')
+      : '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Aucune mission encore</div></div>';
+  } else {
+    const recentEl = document.getElementById('v-recent-list');
+    recentEl.innerHTML = MISSIONS.length
+      ? MISSIONS.slice(0,8).map(renderMissionCard).join('')
+      : '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-text">Aucune livraison encore.<br>Créez votre première demande.</div></div>';
+  }
+}
+
+function renderMissionCard(m) {
+  const s = STATUS[m.status] || STATUS.attente;
+  const hasAlerte = ALERTES.some(a => (a.missionId||a.mission_id)===m.id);
+  return `<div class="mission-item${hasAlerte?' alerte':''}" onclick="showMissionDetail('${m.id}')">
+    <div class="mi-top">
+      <div class="mi-id">${m.id}</div>
+      <div class="mi-status" style="background:${s.bg};color:${s.color}">${s.label}</div>
+    </div>
+    <div class="mi-dest">${m.destNom||m.dest_nom||'—'}</div>
+    <div class="mi-addr">📍 ${m.commune} · ${(m.adresse||'').substring(0,30)}${(m.adresse||'').length>30?'...':''}</div>
+    <div class="mi-bottom">
+      <div class="mi-frais">${(parseInt(m.frais)||0).toLocaleString()} FCFA</div>
+      <div style="font-size:11px;color:var(--gris)">${m.livreurNom||m.livreur_nom||'—'}</div>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// DETAIL MISSION
+// ============================================================
+async function showMissionDetail(id) {
+  showLoading('Chargement de la mission...');
+  const res = await api({ action:'getMission', id });
+  hideLoading();
+  if(!res.ok) { toast('❌ '+res.error,'error'); return; }
+  const m = res.mission;
+  const s = STATUS[m.status] || STATUS.attente;
+
+  // Actions selon rôle et statut
+  const next = {attente:'accepte',accepte:'recupere',recupere:'enroute',enroute:'livre'};
+  const nextLabels = {accepte:'✅ Accepter la mission',recupere:'📦 Colis récupéré',enroute:'🛵 Partir en livraison',livre:'✅ Confirmer la livraison'};
+  let actionsHtml = '';
+
+  if(USER.role==='livreur' && next[m.status]) {
+    actionsHtml += `<button class="btn btn-vt" onclick="changerStatus('${m.id}','${next[m.status]}','${m.destTel||m.dest_tel||''}','${m.destNom||m.dest_nom||''}')" style="margin-bottom:8px">${nextLabels[next[m.status]]}</button>`;
+  }
+  if(USER.role==='livreur' && !['livre','echec','annule'].includes(m.status)) {
+    actionsHtml += `<button class="btn btn-ghost" onclick="changerStatus('${m.id}','echec','','')" style="margin-bottom:8px">❌ Signaler un échec</button>`;
+  }
+  if(USER.role==='vendeuse' && m.status==='attente') {
+    actionsHtml += `<button class="btn btn-rouge" onclick="changerStatus('${m.id}','annule','','')" style="margin-bottom:8px">🚫 Annuler cette livraison</button>`;
+  }
+  actionsHtml += `<button class="gps-btn" onclick="window.open('https://www.google.com/maps/search/'+encodeURIComponent('${m.adresse} ${m.commune} Abidjan'))" style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--vt-l);color:var(--vt-d);border:none;border-radius:var(--r-sm);padding:12px 16px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px">🗺️ Ouvrir dans Google Maps</button>`;
+
+  // Bon de livraison
+  let bonHtml = '';
+  if(m.bonId || m.bon_id) {
+    const bonRes = await api({ action:'getBon', id: m.bonId||m.bon_id });
+    if(bonRes.ok) {
+      const b = bonRes.bon;
+      bonHtml = `<div class="bon">
+        <div class="bon-header"><div class="bon-title">📄 Bon de Livraison</div><div style="font-size:11px;color:var(--gris)">${b.id}</div></div>
+        <div class="bon-row"><span class="bon-key">Vendeuse</span><span class="bon-val">${b.vendeuse}</span></div>
+        <div class="bon-row"><span class="bon-key">Livreur</span><span class="bon-val">${b.livreur}</span></div>
+        <div class="bon-row"><span class="bon-key">Destinataire</span><span class="bon-val">${b.dest}</span></div>
+        <div class="bon-row"><span class="bon-key">Adresse</span><span class="bon-val">${b.adresse}</span></div>
+        <div class="bon-row"><span class="bon-key">Frais</span><span class="bon-val" style="color:var(--vt);font-weight:800">${(parseInt(b.frais)||0).toLocaleString()} FCFA</span></div>
+        <div class="bon-stamp">LIVRÉ ✅ — ${fmtDate(b.generatedAt||b.generated_at)}</div>
+      </div>
+      <button class="btn btn-vt" style="margin-bottom:8px" onclick="partagerBon(${JSON.stringify(b).replace(/'/g,'&#39;')})">📤 Partager le bon WhatsApp</button>`;
+    }
+  }
+
+  // Timeline
+  const tl = [];
+  if(m.createdAt||m.created_at)   tl.push({l:'📋 Demande créée',t:fmtDate(m.createdAt||m.created_at)});
+  if(m.acceptedAt||m.accepted_at) tl.push({l:'✅ Acceptée par le livreur',t:fmtDate(m.acceptedAt||m.accepted_at)});
+  if(m.recupereAt||m.recupere_at) tl.push({l:'📦 Colis récupéré',t:fmtDate(m.recupereAt||m.recupere_at)});
+  if(m.enrouteAt||m.enroute_at)   tl.push({l:'🛵 En route',t:fmtDate(m.enrouteAt||m.enroute_at)});
+  if(m.livreAt||m.livre_at)       tl.push({l:'✅ Livré',t:fmtDate(m.livreAt||m.livre_at)});
+
+  const tlHtml = tl.length ? `<div class="card" style="margin-bottom:12px">
+    <div class="card-title"><span class="ci ci-vt">📍</span>Suivi</div>
+    <div class="timeline">${tl.map(t=>`<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-content"><div class="tl-title">${t.l}</div><div class="tl-time">${t.t}</div></div></div>`).join('')}</div>
+  </div>` : '';
+
+  const trackUrl = window.location.href.split('?')[0] + '?track=' + m.id;
+
+  document.getElementById('modal-mission-content').innerHTML = `
+    <div class="modal-title">${m.id}</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:${s.bg};color:${s.color};font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;margin-bottom:14px">${s.label}</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="bon-row"><span style="color:var(--gris)">Destinataire</span><span style="font-weight:700">${m.destNom||m.dest_nom}</span></div>
+      ${(m.destTel||m.dest_tel)?`<div class="bon-row"><span style="color:var(--gris)">Téléphone</span><span style="font-weight:600">${m.destTel||m.dest_tel}</span></div>`:''}
+      <div class="bon-row"><span style="color:var(--gris)">Adresse</span><span style="font-weight:600;text-align:right;max-width:58%">${m.adresse}, ${m.commune}</span></div>
+      ${m.description?`<div class="bon-row"><span style="color:var(--gris)">Contenu</span><span style="font-weight:600">${m.description}</span></div>`:''}
+      <div class="bon-row"><span style="color:var(--gris)">Frais</span><span style="font-weight:800;color:var(--vt);font-size:15px">${(parseInt(m.frais)||0).toLocaleString()} FCFA</span></div>
+      <div class="bon-row"><span style="color:var(--gris)">Vendeuse</span><span style="font-weight:600">${m.vendeuseNom||m.vendeuse_nom}</span></div>
+    </div>
+    ${bonHtml}
+    ${tlHtml}
+    ${actionsHtml}
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="navigator.clipboard?.writeText('${trackUrl}').then(()=>toast('✅ Lien copié !','success')).catch(()=>toast('${trackUrl}'))">🔗 Copier lien de suivi cliente</button>
+  `;
+  openModal('modal-mission');
+}
+
+// ============================================================
+// CHANGER STATUT
+// ============================================================
+async function changerStatus(id, newStatus, destTel, destNom) {
+  showLoading('Mise à jour...');
+  const res = await api({ action:'updateStatus', id, status:newStatus });
+  hideLoading();
+  if(!res.ok) { toast('❌ '+res.error,'error'); return; }
+
+  const labels = {accepte:'✅ Mission acceptée !',recupere:'📦 Colis récupéré !',enroute:'🛵 En route !',livre:'✅ Livraison confirmée — bon généré !',echec:'❌ Échec enregistré',annule:'🚫 Livraison annulée'};
+  toast(labels[newStatus]||'Statut mis à jour','success');
+  closeModal('modal-mission');
+  await syncData();
+
+  // Notification WA destinataire
+  if((newStatus==='enroute'||newStatus==='livre') && destTel && destTel!=='') {
+    const telClean = destTel.replace('+','');
+    const msgWA = newStatus==='enroute'
+      ? `🛵 *LIVRAISON PRO* — Votre colis est en route !\n\nBonjour ${destNom} 👋\nVotre commande est sur le chemin. Le livreur arrive bientôt.\n\n📦 Réf : ${id}\n\n— Livraison Pro 🇨🇮`
+      : `✅ *LIVRAISON PRO* — Livré !\n\nBonjour ${destNom} 👋\nVotre commande *${id}* a bien été livrée.\n\nMerci de votre confiance 🇨🇮`;
+    setTimeout(() => {
+      if(confirm(`Notifier ${destNom} par WhatsApp ?`))
+        window.open('https://wa.me/'+telClean+'?text='+encodeURIComponent(msgWA));
+    }, 400);
+  }
+}
+
+// ============================================================
+// CRÉER LIVRAISON (VENDEUSE)
+// ============================================================
+async function creerLivraison() {
+  const dest       = document.getElementById('v-dest').value.trim();
+  const destTel    = document.getElementById('v-dest-tel').value.trim();
+  const adresse    = document.getElementById('v-adresse').value.trim();
+  const commune    = document.getElementById('v-commune').value;
+  const frais      = document.getElementById('v-frais').value;
+  const desc       = document.getElementById('v-desc').value.trim();
+  const date       = document.getElementById('v-date').value;
+  const livreurNom = document.getElementById('v-livreur-nom').value.trim();
+  const errTel     = document.getElementById('v-dest-tel-err');
+  const btn        = document.getElementById('btn-creer-livraison');
+
+  errTel.style.display = 'none';
+  if(!dest||!adresse||!commune) { toast('❌ Destinataire, adresse et commune requis','error'); return; }
+  if(destTel && !validerTel(destTel)) { errTel.style.display='block'; return; }
+
+  btn.disabled = true;
+  showLoading('Création de la livraison...');
+
+  const res = await api({
+    action: 'createMission',
+    vendeuseId: USER.id, vendeuseNom: USER.nom, vendeusetel: USER.tel,
+    livreurNom: livreurNom || 'Non assigné',
+    destNom: dest, destTel: destTel ? formatTel(destTel) : '',
+    adresse, commune, frais: frais||'0', description: desc,
+    dateSouhaitee: date
+  });
+
+  hideLoading();
+  btn.disabled = false;
+
+  if(!res.ok) {
+    if(res.code==='TRIAL_EXPIRED') { toast('⏰ Essai expiré — passez au plan Solo','error'); return; }
+    if(res.code==='QUOTA_REACHED') { toast('⚠️ Quota mensuel atteint — passez au plan Pro','error'); return; }
+    toast('❌ '+res.error,'error'); return;
+  }
+
+  if(res.warning) toast('⚠️ '+res.warning,'');
+
+  // Reset form
+  ['v-dest','v-dest-tel','v-adresse','v-frais','v-desc','v-livreur-nom'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('v-commune').value='';
+
+  await syncData();
+  showScreen('v-dashboard');
+  toast('✅ Livraison '+res.id+' créée !','success');
+
+  // WA vers livreur
+  setTimeout(() => {
+    const msg = `🛵 *LIVRAISON PRO — Nouvelle demande*\n\nBonjour ${livreurNom||'Livreur'} !\n\n📦 *Mission :* ${res.id}\n👤 *Destinataire :* ${dest}\n📍 *Adresse :* ${adresse}, ${commune}\n🗓️ *Date :* ${date||'Dès que possible'}\n💰 *Frais :* ${parseInt(frais||0).toLocaleString()} FCFA\n📝 *Contenu :* ${desc||'Non précisé'}\n\n✅ Confirmez via Livraison Pro 🇨🇮`;
+    if(confirm('Envoyer la demande à '+livreurNom+' par WhatsApp ?'))
+      window.open('https://wa.me/?text='+encodeURIComponent(msg));
+  }, 500);
+}
+
+// ============================================================
+// ALERTES
+// ============================================================
+function fillAlerteMissions() {
+  const sel = document.getElementById('l-alerte-mission');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Choisir une mission...</option>' +
+    MISSIONS.filter(m=>!['livre','annule'].includes(m.status))
+      .map(m=>`<option value="${m.id}">${m.id} — ${m.destNom||m.dest_nom} (${m.commune})</option>`).join('');
+}
+
+async function envoyerAlerteLibreur() {
+  const missionId = document.getElementById('l-alerte-mission').value;
+  const type      = document.getElementById('l-alerte-type').value;
+  const desc      = document.getElementById('l-alerte-desc').value.trim();
+  if(!missionId||!type||!desc) { toast('❌ Remplissez tous les champs','error'); return; }
+
+  showLoading('Envoi de l\'alerte...');
+  const res = await api({ action:'createAlerte', missionId, fromRole:'livreur', fromNom:USER.nom, type, description:desc });
+  hideLoading();
+  if(!res.ok) { toast('❌ '+res.error,'error'); return; }
+
+  document.getElementById('l-alerte-mission').value='';
+  document.getElementById('l-alerte-type').value='';
+  document.getElementById('l-alerte-desc').value='';
+  await syncData();
+  toast('🚨 Alerte envoyée !','success');
+
+  // WA vendeuse
+  const m = MISSIONS.find(x=>x.id===missionId);
+  if(m) {
+    setTimeout(()=>{
+      const msg = `🚨 *LIVRAISON PRO — Alerte livreur*\n\n📦 Mission : ${missionId}\n⚠️ ${type}\n📝 ${desc}\n${type.includes('URGENT')?'\n*INTERVENTION REQUISE* 🔴':''}\n\n— ${USER.nom}`;
+      if(confirm('Notifier la vendeuse par WhatsApp ?'))
+        window.open('https://wa.me/?text='+encodeURIComponent(msg));
+    },400);
+  }
+}
+
+function renderAlertes() {
+  const listL = document.getElementById('l-alertes-list');
+  const listV = document.getElementById('v-alertes-recues');
+  const myAlertes = ALERTES.filter(a=>a.fromRole==='livreur'||a.from_role==='livreur');
+  if(listL) listL.innerHTML = myAlertes.length
+    ? myAlertes.map(a=>`<div class="alerte-bar"><span class="alerte-icon">🚨</span><div class="alerte-text"><strong>${a.missionId||a.mission_id} — ${a.type}</strong><br>${a.description}<br><span style="font-size:10px;opacity:0.7">${fmtDate(a.createdAt||a.created_at)}</span></div></div>`).join('')
+    : '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Aucune alerte envoyée.</div></div>';
+  if(listV) listV.innerHTML = myAlertes.length
+    ? myAlertes.map(a=>`<div class="alerte-bar"><span class="alerte-icon">🚨</span><div class="alerte-text"><strong>${a.missionId||a.mission_id} — ${a.type}</strong><br>${a.description}<br><span style="font-size:10px;opacity:0.7">${fmtDate(a.createdAt||a.created_at)}</span></div></div>`).join('')
+    : '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Aucune alerte du livreur.</div></div>';
+}
+
+function fillAlerteVendeuseUI() {
+  const sel = document.getElementById('v-alerte-livraison');
+  if(sel) sel.innerHTML = '<option value="">Choisir...</option>' +
+    MISSIONS.map(m=>`<option value="${m.id}">${m.id} — ${m.destNom||m.dest_nom}</option>`).join('');
+  renderAlertes();
+}
+
+async function envoyerAlerteVendeuse() {
+  const livId = document.getElementById('v-alerte-livraison').value;
+  const type  = document.getElementById('v-alerte-type').value;
+  const msg   = document.getElementById('v-alerte-msg').value.trim();
+  if(!livId||!type||!msg) { toast('❌ Remplissez tous les champs','error'); return; }
+
+  showLoading('Envoi...');
+  const res = await api({ action:'createAlerte', missionId:livId, fromRole:'vendeuse', fromNom:USER.nom, type, description:msg });
+  hideLoading();
+  if(!res.ok) { toast('❌ '+res.error,'error'); return; }
+  toast('🚨 Alerte envoyée !','success');
+
+  const m = MISSIONS.find(x=>x.id===livId);
+  setTimeout(()=>{
+    const msgL = `🚨 *LIVRAISON PRO — Alerte vendeuse*\n\n📦 ${livId}\n⚠️ ${type}\n📝 ${msg}\n\n— ${USER.nom}`;
+    if(confirm('Alerter le livreur par WhatsApp ?')) window.open('https://wa.me/?text='+encodeURIComponent(msgL));
+    if(m && (m.destTel||m.dest_tel)) {
+      const msgD = `🚨 *LIVRAISON PRO* — Information\n\nBonjour !\n${type==='annulation'?'Votre livraison a été annulée.':msg}\n\nPour toute question : ${USER.tel}\n— Livraison Pro 🇨🇮`;
+      if(confirm('Alerter aussi la destinataire ?')) window.open('https://wa.me/'+(m.destTel||m.dest_tel).replace('+','')+'?text='+encodeURIComponent(msgD));
+    }
+  },400);
+}
+
+// ============================================================
+// RAPPORT
+// ============================================================
+async function genererRapport() {
+  const mois = document.getElementById('v-rapport-mois').value;
+  showLoading('Génération du rapport...');
+  const res = await api({ action:'genererRapport', userId:USER.id, vendeuseNom:USER.nom, mois, annee:new Date().getFullYear() });
+  hideLoading();
+  if(!res.ok) { toast('❌ '+res.error,'error'); return; }
+  const r = res.rapport;
+  const moisNoms=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  document.getElementById('rapport-result').innerHTML = `
+    <div class="card">
+      <div class="card-title"><span class="ci ci-vt">📄</span>Rapport ${moisNoms[r.mois]||r.mois} ${r.annee}</div>
+      <div class="rapport-row"><span style="color:var(--gris)">Total livraisons</span><span style="font-weight:700">${r.total}</span></div>
+      <div class="rapport-row"><span style="color:var(--gris)">Livrées avec succès</span><span style="font-weight:700;color:var(--vt)">${r.livrees}</span></div>
+      <div class="rapport-row"><span style="color:var(--gris)">Échecs</span><span style="font-weight:700;color:var(--rouge)">${r.echecs}</span></div>
+      <div class="rapport-row"><span style="color:var(--gris)">Taux de succès</span><span style="font-weight:700">${r.tauxSucces}%</span></div>
+      <div class="rapport-row"><span style="color:var(--gris)">Frais totaux</span><span style="font-weight:800;color:var(--or);font-size:16px">${(r.fraisTotal||0).toLocaleString()} FCFA</span></div>
+    </div>
+    <button class="btn btn-vt" onclick="partagerRapport(${JSON.stringify(r).replace(/'/g,'&#39;')})">📤 Envoyer par WhatsApp</button>
+  `;
+}
+
+function partagerRapport(r) {
+  const moisNoms=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const msg = `📊 *RAPPORT LIVRAISON PRO — ${moisNoms[r.mois]||r.mois} ${r.annee}*\n\n🏪 ${USER.nom}\n\n📦 Total : ${r.total}\n✅ Succès : ${r.livrees}\n❌ Échecs : ${r.echecs}\n📈 Taux : ${r.tauxSucces}%\n💰 Frais : ${(r.fraisTotal||0).toLocaleString()} FCFA\n\n— Livraison Pro 🇨🇮`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg));
+}
+
+function partagerBon(b) {
+  const msg = `📄 *BON DE LIVRAISON — Livraison Pro 🇨🇮*\n\n✅ ${b.id}\n\n👤 Destinataire : ${b.dest}\n📍 Adresse : ${b.adresse}\n📦 Contenu : ${b.description||'—'}\n💰 Frais : ${(parseInt(b.frais)||0).toLocaleString()} FCFA\n🛵 Livreur : ${b.livreur}\n🏪 Vendeuse : ${b.vendeuse}\n\n🕐 ${fmtDate(b.generatedAt||b.generated_at)}\n\n*Livraison confirmée ✅*`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg));
+}
+
+// ============================================================
+// STATS LIVREUR
+// ============================================================
+function renderStatsLivreur() {
+  const total  = MISSIONS.length;
+  const livres = MISSIONS.filter(m=>m.status==='livre').length;
+  const gains  = MISSIONS.filter(m=>m.status==='livre').reduce((a,m)=>a+(parseInt(m.frais)||0),0);
+  document.getElementById('l-stats-content').innerHTML = `
+    <div class="rapport-row"><span style="color:var(--gris)">Total missions</span><span style="font-weight:700">${total}</span></div>
+    <div class="rapport-row"><span style="color:var(--gris)">Livrées</span><span style="font-weight:700;color:var(--vt)">${livres}</span></div>
+    <div class="rapport-row"><span style="color:var(--gris)">Taux de succès</span><span style="font-weight:700">${total?Math.round(livres/total*100):0}%</span></div>
+    <div class="rapport-row"><span style="color:var(--gris)">Gains totaux</span><span style="font-weight:800;color:var(--or);font-size:16px">${gains.toLocaleString()} FCFA</span></div>
+  `;
+  const planZone = document.getElementById('plan-zone-l');
+  if(planZone) planZone.innerHTML = planCard();
+  const planZoneV = document.getElementById('plan-zone-v');
+  if(planZoneV && !planZoneV.innerHTML) planZoneV.innerHTML = planCard();
+}
+
+function planCard() {
+  return `<div style="background:linear-gradient(135deg,var(--noir),#1c1c2e);border-radius:var(--r);padding:18px;margin-bottom:14px;color:#fff">
+    <div style="font-size:11px;opacity:0.35;font-weight:700;text-transform:uppercase;margin-bottom:6px">PLAN ACTUEL</div>
+    <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:4px">Essai Gratuit 🎁</div>
+    <div style="font-size:13px;opacity:0.5;margin-bottom:16px">7 jours — accès complet</div>
+    <div style="background:var(--or);border-radius:10px;padding:12px 16px;cursor:pointer" onclick="toast('💳 2 000 FCFA/mois — disponible bientôt')">
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800">🚀 Passer à Pro — 2 000 FCFA/mois</div>
+      <div style="font-size:11px;opacity:0.85;margin-top:3px">Missions illimitées + bons + alertes</div>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// TRACKING PUBLIC (lien ?track=LP-001)
+// ============================================================
+async function showPublicTracking(id) {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.body.style.background = '#f4f5f7';
+
+  // Spinner
+  document.body.innerHTML += `<div id="pub-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'DM Sans',sans-serif">
+    <div style="width:36px;height:36px;border:3px solid #E5E7EB;border-top-color:#F77F00;border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:12px"></div>
+    <div style="font-size:13px;color:#6B7280">Chargement du suivi...</div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  </div>`;
+
+  const res = await api({ action:'trackMission', id });
+  document.getElementById('pub-loading')?.remove();
+
+  if(!res.ok || !res.mission) {
+    document.body.innerHTML = `<div style="max-width:430px;margin:0 auto;padding:60px 24px;text-align:center;font-family:'DM Sans',sans-serif">
+      <div style="font-size:48px;margin-bottom:16px">🔍</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px">Introuvable</div>
+      <div style="color:#6B7280;font-size:14px">Aucune livraison pour l'identifiant "${id}"</div>
+    </div>`;
+    return;
+  }
+
+  const m = res.mission;
+  const tl = res.timeline || [];
+  const bon = res.bon;
+  const alertes = res.alertes || [];
+  const STATUS_TRACK = {
+    attente:{label:'⏳ En attente',bg:'#E5E7EB',color:'#6B7280'},
+    accepte:{label:'✅ Accepté',bg:'#D4F5E2',color:'#007A35'},
+    recupere:{label:'📦 Récupéré',bg:'#FFF0DC',color:'#D96B00'},
+    enroute:{label:'🛵 En route',bg:'#FFF0DC',color:'#D96B00'},
+    livre:{label:'✅ Livré',bg:'#D4F5E2',color:'#007A35'},
+    echec:{label:'❌ Échec',bg:'#FEE2E2',color:'#DC2626'},
+    annule:{label:'🚫 Annulé',bg:'#FEE2E2',color:'#DC2626'}
+  };
+  const s = STATUS_TRACK[m.status] || STATUS_TRACK.attente;
+
+  document.body.innerHTML = `
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <div style="max-width:430px;margin:0 auto;padding:20px;font-family:'DM Sans',sans-serif;padding-bottom:40px">
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="display:flex;width:44px;height:30px;border-radius:5px;overflow:hidden;margin:0 auto 10px">
+        <div style="flex:1;background:#F77F00"></div><div style="flex:1;background:#fff"></div><div style="flex:1;background:#009A44"></div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#0D0D0D">Livraison Pro 🇨🇮</div>
+    </div>
+    <div style="background:linear-gradient(135deg,#0D0D0D,#1c2a1c);border-radius:16px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="font-size:64px;position:absolute;right:-6px;bottom:-6px;opacity:0.06">🛵</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.35);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">SUIVI DE LIVRAISON</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:12px">${m.id}</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;background:${s.bg};color:${s.color};font-weight:700;font-size:12px;padding:7px 14px;border-radius:20px">${s.label}</div>
+    </div>
+    ${alertes.length?`<div style="background:#FEE2E2;border:1.5px solid rgba(220,38,38,0.2);border-radius:10px;padding:12px 14px;margin-bottom:14px"><div style="font-size:13px;color:#DC2626;font-weight:600">🚨 ${alertes[0].type} — ${alertes[0].description}</div></div>`:''}
+    <div style="background:#fff;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 16px rgba(0,0,0,0.08)">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px">👤 Votre livraison</div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #E5E7EB;font-size:13px"><span style="color:#6B7280">Destinataire</span><span style="font-weight:700">${m.destNom||m.dest_nom}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #E5E7EB;font-size:13px"><span style="color:#6B7280">Adresse</span><span style="font-weight:600;text-align:right;max-width:55%">${m.adresse}, ${m.commune}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:#6B7280">Envoyé par</span><span style="font-weight:600">${m.vendeuseNom||m.vendeuse_nom}</span></div>
+    </div>
+    ${tl.length?`<div style="background:#fff;border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 2px 16px rgba(0,0,0,0.08)">
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px">📍 Suivi en temps réel</div>
+      ${tl.map(t=>`<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #E5E7EB">
+        <div style="width:24px;height:24px;border-radius:50%;background:#009A44;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0">✓</div>
+        <div><div style="font-size:13px;font-weight:600">${t.label}</div><div style="font-size:11px;color:#6B7280;margin-top:2px">${t.time}</div></div>
+      </div>`).join('')}
+    </div>`:''}
+    ${bon?`<div style="background:linear-gradient(135deg,#f8fffe,#f0faf5);border:2px solid #D4F5E2;border-radius:16px;padding:18px;margin-bottom:14px">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#007A35;margin-bottom:12px">📄 Bon de livraison</div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,154,68,0.1);font-size:13px"><span style="color:#6B7280">Statut</span><span style="font-weight:700;color:#007A35">LIVRÉ ✅</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:#6B7280">Confirmé le</span><span style="font-weight:600">${bon.generatedAt||bon.generated_at||''}</span></div>
+    </div>`:''}
+    <div style="text-align:center;padding:20px 0;color:#6B7280;font-size:12px">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;color:#F77F00;font-size:14px;margin-bottom:4px">Livraison Pro 🇨🇮</div>
+      Livraison professionnelle en Côte d'Ivoire
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
