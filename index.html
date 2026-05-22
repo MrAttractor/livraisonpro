@@ -375,6 +375,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
       <div class="card"><div class="card-title"><span class="ci ci-vt">📊</span>Mes performances</div><div id="l-stats"></div></div>
       <div id="l-plan"></div>
       <button class="aide-btn" onclick="showAide('l')">❓ Comment ça marche</button>
+    <button onclick="seDeconnecter()" style="width:100%;padding:13px;background:transparent;border:2px solid #FEE2E2;color:#DC2626;border-radius:16px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">🚪 Se déconnecter</button>
     </div>
   </div>
 
@@ -469,6 +470,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
       <div id="m-rapport-result"></div>
       <div id="m-plan"></div>
       <button class="aide-btn" onclick="showAide('m')">❓ Comment ça marche</button>
+    <button onclick="seDeconnecter()" style="width:100%;padding:13px;background:transparent;border:2px solid #FEE2E2;color:#DC2626;border-radius:16px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">🚪 Se déconnecter</button>
     </div>
   </div>
 
@@ -587,6 +589,10 @@ function initApp(){
     if(vl)vl.style.display='none';if(vm)vm.style.display='none';
   }
   checkMeteo();
+  // Vider cache et forcer sync au démarrage
+  localStorage.removeItem('lp_missions');
+  localStorage.removeItem('lp_alertes');
+  syncData(false);
 }
 
 function buildNav(screens,icons,labels){
@@ -947,6 +953,19 @@ async function showPublicTracking(id){
   var statuses={attente:{l:'⏳ En attente',bg:'#E5E7EB',c:'#6B7280'},accepte:{l:'✅ Accepté',bg:'#D4F5E2',c:'#007A35'},recupere:{l:'📦 Récupéré',bg:'#FFF0DC',c:'#D96B00'},enroute:{l:'🛵 En route',bg:'#FFF0DC',c:'#D96B00'},livre:{l:'✅ Livré',bg:'#D4F5E2',c:'#007A35'},echec:{l:'❌ Échec',bg:'#FEE2E2',c:'#DC2626'},annule:{l:'🚫 Annulé',bg:'#FEE2E2',c:'#DC2626'}};
   var s=statuses[m.status]||statuses.attente;
   document.body.innerHTML='<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"><div style="max-width:430px;margin:0 auto;padding:20px;font-family:DM Sans,sans-serif;padding-bottom:40px"><div style="text-align:center;margin-bottom:16px"><div style="display:flex;width:40px;height:28px;border-radius:5px;overflow:hidden;margin:0 auto 10px"><div style="flex:1;background:#F77F00"></div><div style="flex:1;background:#fff"></div><div style="flex:1;background:#009A44"></div></div><div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;color:#0D0D0D">Livraison Pro 🇨🇮</div></div><div style="background:linear-gradient(135deg,#0D0D0D,#1c2a1c);border-radius:16px;padding:18px;margin-bottom:14px"><div style="font-size:9px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">SUIVI DE LIVRAISON</div><div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:10px">'+m.id+'</div><div style="display:inline-flex;align-items:center;background:'+s.bg+';color:'+s.c+';font-weight:700;font-size:11px;padding:6px 12px;border-radius:20px">'+s.l+'</div></div>'+(alertes.length?'<div style="background:#FEE2E2;border:1.5px solid rgba(220,38,38,.2);border-radius:10px;padding:11px 13px;margin-bottom:12px"><div style="font-size:12px;color:#DC2626;font-weight:600">🚨 '+alertes[0].type+' — '+alertes[0].description+'</div></div>':'')+'<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">👤 Votre livraison</div><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Destinataire</span><span style="font-weight:700">'+(m.destNom||m.dest_nom)+'</span></div><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Adresse</span><span style="font-weight:600;text-align:right;max-width:54%">'+(m.adresse||'')+', '+(m.commune||'')+'</span></div>'+(m.modePaiement||m.mode_paiement?'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Paiement</span><span style="font-weight:700;color:#009A44">'+(m.modePaiement||m.mode_paiement)+'</span></div>':'')+'<div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px"><span style="color:#6B7280">Envoyé par</span><span style="font-weight:600">'+(m.vendeuseNom||m.vendeuse_nom)+'</span></div></div>'+(tl.length?'<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">📍 Suivi en temps réel</div>'+tl.map(function(t){return'<div style="display:flex;gap:11px;padding:8px 0;border-bottom:1px solid #E5E7EB"><div style="width:22px;height:22px;border-radius:50%;background:#009A44;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;flex-shrink:0">✓</div><div><div style="font-size:12px;font-weight:600">'+t.label+'</div><div style="font-size:10px;color:#6B7280;margin-top:1px">'+t.time+'</div></div></div>'}).join('')+'</div>':'')+(bon?'<div style="background:linear-gradient(135deg,#f8fffe,#f0faf5);border:2px solid #D4F5E2;border-radius:14px;padding:16px;margin-bottom:12px"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:800;color:#007A35;margin-bottom:10px">📄 Bon de livraison</div>'+(bon.modePaiement?'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,154,68,.1);font-size:12px"><span style="color:#6B7280">Mode paiement</span><span style="font-weight:700;color:#009A44">'+bon.modePaiement+'</span></div>':'')+'<div style="background:#D4F5E2;border-radius:6px;padding:7px;text-align:center;margin-top:10px;font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#007A35">LIVRÉ ✅</div></div>':'')+'<div style="text-align:center;padding:16px 0;color:#6B7280;font-size:11px"><div style="font-family:Syne,sans-serif;font-weight:800;color:#F77F00;font-size:13px;margin-bottom:3px">Livraison Pro 🇨🇮</div>La livraison professionnelle en Côte d\'Ivoire</div></div>';
+}
+
+// DÉCONNEXION
+function seDeconnecter(){
+  if(!confirm('Voulez-vous vous déconnecter ?'))return;
+  localStorage.removeItem('lp_user');
+  localStorage.removeItem('lp_missions');
+  localStorage.removeItem('lp_alertes');
+  localStorage.removeItem('lp_trial');
+  localStorage.removeItem('lp_dispo');
+  localStorage.removeItem('lp_visite');
+  toast('À bientôt !','');
+  setTimeout(function(){window.location.reload()},1000);
 }
 </script>
 </body>
