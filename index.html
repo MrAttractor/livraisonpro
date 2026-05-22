@@ -979,16 +979,31 @@ function seDeconnecter(){
 }
 
 // RECONNEXION RAPIDE
-async function reconnexionRapide(){
+function reconnexionRapide(){
   closeModal('modal-aide');
-  var tel=prompt('Entrez votre numero WhatsApp :','');
-  if(!tel)return;
-  showLoading('Recherche...');
-  var res=await api({action:'getUserByTel',tel:fmtTel(tel.trim())});
-  hideLoading();
-  if(!res.ok||!res.user){toast('Numero introuvable — creez un compte.','rouge');return}
+  document.getElementById('rc-input').value='';
+  document.getElementById('rc-input-err').style.display='none';
+  document.getElementById('rc-btn').textContent='Rechercher mon compte';
+  openModal('modal-rc');
+}
+
+async function doReconnexion(){
+  var tel=document.getElementById('rc-input').value.trim();
+  var err=document.getElementById('rc-input-err');
+  var btn=document.getElementById('rc-btn');
+  err.style.display='none';
+  if(!tel){err.textContent='Entrez votre numero';err.style.display='block';return}
+  btn.disabled=true;btn.textContent='Recherche...';
+  var res=await api({action:'getUserByTel',tel:fmtTel(tel)});
+  btn.disabled=false;btn.textContent='Rechercher mon compte';
+  if(!res.ok||!res.user){
+    err.textContent='Numero introuvable — verifiez ou creez un compte.';
+    err.style.display='block';
+    return;
+  }
   USER=res.user;
   localStorage.setItem('lp_user',JSON.stringify(USER));
+  closeModal('modal-rc');
   if(document.getElementById('onboarding'))document.getElementById('onboarding').style.display='none';
   initApp();
   syncData(false);
@@ -1012,6 +1027,22 @@ function normaliserUser(){
 }
 
 </script>
+
+<!-- MODAL RECONNEXION -->
+<div class="modal-overlay" id="modal-rc">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔑 Me reconnecter</div>
+    <div class="fg-group">
+      <label class="fg-label">Votre numéro WhatsApp</label>
+      <input class="fg-input" id="rc-input" placeholder="+225 07 XX XX XX XX" type="tel">
+      <div style="font-size:11px;color:var(--rouge);margin-top:4px;display:none" id="rc-input-err">Numéro introuvable</div>
+    </div>
+    <button class="btn btn-or" id="rc-btn" onclick="doReconnexion()" style="margin-bottom:8px">Rechercher mon compte</button>
+    <button class="btn btn-ghost" onclick="closeModal('modal-rc')">Annuler</button>
+  </div>
+</div>
+
 </body>
 </html>
 
