@@ -544,8 +544,8 @@ setTimeout(function(){
   document.getElementById('splash').style.opacity='0';
   setTimeout(function(){
     document.getElementById('splash').style.display='none';
-    if(USER){normaliserUser();initApp();}else{
-    document.getElementById('onboarding').style.display='block';}}
+    if(USER){normaliserUser();initApp();}
+    else{document.getElementById('onboarding').style.display='block';}
   },400);
 },1800);
 
