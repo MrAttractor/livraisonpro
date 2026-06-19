@@ -218,6 +218,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
 .empty-icon{font-size:36px;margin-bottom:8px}
 .empty-text{font-size:12px;line-height:1.6}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body><!-- SPLASH -->
 <div id="splash">
@@ -486,7 +487,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
 <div class="modal-overlay" id="modal-aide"><div class="modal"><div class="modal-handle"></div><div class="modal-title">❓ Comment ça marche</div><div id="modal-aide-content"></div><button class="btn btn-ghost" onclick="closeModal('modal-aide')" style="margin-top:10px">Fermer</button></div></div>
 
 <script>
-const API='https://script.google.com/macros/s/AKfycbwLkSjg1WFlRJBJMJYBcN0w5FjgmyIvXsGxKASHhhGZv61aqFMdB-gtB7G3O7YNG8HP/exec';
+const SUPABASE_URL='https://jwucinmwrksqfrmkymds.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3dWNpbm13cmtzcWZybWt5bWRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDQyODYsImV4cCI6MjA5NjU4MDI4Nn0.CsDqzi2be1jm1ApkCr_AIU5mOrwp9PzvsTsv90Qi_Eg';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const DIST={Cocody:{Cocody:2,Marcory:10,Plateau:8,Yopougon:18,Abobo:20,Adjamé:12,Koumassi:12,'Port-Bouët':15,Treichville:10,Attecoubé:14,Bingerville:15,Songon:25},Marcory:{Cocody:10,Marcory:2,Plateau:6,Yopougon:16,Abobo:22,Adjamé:10,Koumassi:5,'Port-Bouët':8,Treichville:5,Attecoubé:12,Bingerville:20,Songon:28},Plateau:{Cocody:8,Marcory:6,Plateau:1,Yopougon:14,Abobo:18,Adjamé:4,Koumassi:7,'Port-Bouët':10,Treichville:4,Attecoubé:8,Bingerville:18,Songon:22},Yopougon:{Cocody:18,Marcory:16,Plateau:14,Yopougon:3,Abobo:12,Adjamé:10,Koumassi:18,'Port-Bouët':20,Treichville:14,Attecoubé:8,Bingerville:28,Songon:12},Abobo:{Cocody:20,Marcory:22,Plateau:18,Yopougon:12,Abobo:2,Adjamé:8,Koumassi:22,'Port-Bouët':24,Treichville:18,Attecoubé:14,Bingerville:30,Songon:20},Adjamé:{Cocody:12,Marcory:10,Plateau:4,Yopougon:10,Abobo:8,Adjamé:2,Koumassi:12,'Port-Bouët':14,Treichville:8,Attecoubé:6,Bingerville:22,Songon:18},Koumassi:{Cocody:12,Marcory:5,Plateau:7,Yopougon:18,Abobo:22,Adjamé:12,Koumassi:2,'Port-Bouët':6,Treichville:5,Attecoubé:14,Bingerville:18,Songon:28},'Port-Bouët':{Cocody:15,Marcory:8,Plateau:10,Yopougon:20,Abobo:24,Adjamé:14,Koumassi:6,'Port-Bouët':2,Treichville:7,Attecoubé:16,Bingerville:22,Songon:30},Treichville:{Cocody:10,Marcory:5,Plateau:4,Yopougon:14,Abobo:18,Adjamé:8,Koumassi:5,'Port-Bouët':7,Treichville:1,Attecoubé:10,Bingerville:18,Songon:24},Attecoubé:{Cocody:14,Marcory:12,Plateau:8,Yopougon:8,Abobo:14,Adjamé:6,Koumassi:14,'Port-Bouët':16,Treichville:10,Attecoubé:2,Bingerville:24,Songon:14},Bingerville:{Cocody:15,Marcory:20,Plateau:18,Yopougon:28,Abobo:30,Adjamé:22,Koumassi:18,'Port-Bouët':22,Treichville:18,Attecoubé:24,Bingerville:2,Songon:36},Songon:{Cocody:25,Marcory:28,Plateau:22,Yopougon:12,Abobo:20,Adjamé:18,Koumassi:28,'Port-Bouët':30,Treichville:24,Attecoubé:14,Bingerville:36,Songon:2}};
 const BM={3:500,7:1000,15:1500,25:2000};
 const BV={3:1000,7:1800,15:2500,25:3500};
@@ -498,7 +501,162 @@ let ALERTES=JSON.parse(localStorage.getItem('lp_alertes')||'[]');
 let DISPO=localStorage.getItem('lp_dispo')==='true';
 let VISITE_DONE=localStorage.getItem('lp_visite')==='true';
 
-async function api(p){try{const r=await fetch(API+'?'+new URLSearchParams(p).toString());return await r.json()}catch(e){return{ok:false,error:'Hors ligne'}}}
+async function api(p){
+  try{
+    switch(p.action){
+
+      case 'createUser':{
+        var chk=await sb.from('users').select('id').eq('tel',p.tel).maybeSingle();
+        if(chk.data)return{ok:false,error:'Ce numéro est déjà inscrit. Utilisez la reconnexion.'};
+        var ins=await sb.from('users').insert({
+          nom:p.nom,tel:p.tel,role:p.role,commune:p.commune,
+          vehicule:p.typeVehicule||null,zones:p.zones||p.commune,
+          plan:'gratuit',disponible:p.role==='livreur',verifie:false
+        }).select().single();
+        if(ins.error)return{ok:false,error:ins.error.message};
+        return{ok:true,user:ins.data};
+      }
+
+      case 'getUserByTel':{
+        var r=await sb.from('users').select('*').eq('tel',p.tel).maybeSingle();
+        if(!r.data)return{ok:false,error:'Introuvable'};
+        return{ok:true,user:r.data};
+      }
+
+      case 'getDashboard':{
+        var col=p.role==='livreur'?'livreur_id':'marchand_id';
+        var r=await sb.from('missions').select('*').eq(col,p.userId).order('created_at',{ascending:false}).limit(50);
+        if(r.error)return{ok:false,error:r.error.message};
+        var ms=r.data||[];
+        var today=new Date().toDateString();
+        var livrees=ms.filter(function(m){return m.status==='livre'});
+        var volume=livrees.reduce(function(a,m){return a+(parseInt(m.frais)||0)},0);
+        var enRoute=ms.filter(function(m){return m.status==='enroute'||m.status==='recupere'}).length;
+        var mIds=ms.map(function(m){return m.id});
+        var alCnt=0;
+        if(mIds.length){var alQ=await sb.from('alertes').select('id',{count:'exact',head:true}).in('mission_id',mIds).eq('lu',false);alCnt=alQ.count||0}
+        var uQ=await sb.from('users').select('trial_start,plan').eq('id',p.userId).single();
+        var trial={joursRestants:30};
+        if(uQ.data&&uQ.data.trial_start){var diff=Math.floor((Date.now()-new Date(uQ.data.trial_start).getTime())/86400000);trial={joursRestants:Math.max(0,30-diff)}}
+        var todayMs=ms.filter(function(m){return new Date(m.created_at).toDateString()===today});
+        var livresToday=livrees.filter(function(m){return new Date(m.created_at).toDateString()===today});
+        var mapped=ms.map(function(m){return{id:m.id,status:m.status,commune:m.commune,adresse:m.adresse,frais:m.frais,modePaiement:m.mode_paiement,mode_paiement:m.mode_paiement,destNom:m.dest_nom,dest_nom:m.dest_nom,destTel:m.dest_tel,dest_tel:m.dest_tel,createdAt:m.created_at,created_at:m.created_at,acceptedAt:m.accepted_at,accepted_at:m.accepted_at,livreurId:m.livreur_id,marchandId:m.marchand_id}});
+        return{ok:true,stats:{missionAujourdhui:todayMs.length,totalMissions:ms.length,livreesAujourdhui:livresToday.length,volume:volume,enRoute:enRoute,alertesActives:alCnt},recentMissions:mapped,trial:trial};
+      }
+
+      case 'getAlertes':{
+        var col=USER&&USER.role==='livreur'?'livreur_id':'marchand_id';
+        var mQ=await sb.from('missions').select('id').eq(col,USER.id);
+        var ids=(mQ.data||[]).map(function(m){return m.id});
+        if(!ids.length)return{ok:true,alertes:[]};
+        var r=await sb.from('alertes').select('*').in('mission_id',ids).order('created_at',{ascending:false});
+        if(r.error)return{ok:false,error:r.error.message};
+        var mapped=(r.data||[]).map(function(a){return{id:a.id,missionId:a.mission_id,mission_id:a.mission_id,fromRole:a.from_role,from_role:a.from_role,fromNom:a.from_nom,type:a.type,description:a.description,lu:a.lu,createdAt:a.created_at,created_at:a.created_at}});
+        return{ok:true,alertes:mapped};
+      }
+
+      case 'getMission':{
+        var r=await sb.from('missions').select('*').eq('id',p.id).single();
+        if(r.error||!r.data)return{ok:false,error:'Introuvable'};
+        var m=r.data;
+        var bQ=await sb.from('bons').select('id').eq('mission_id',m.id).maybeSingle();
+        var bonId=bQ.data?bQ.data.id:null;
+        return{ok:true,mission:{id:m.id,status:m.status,commune:m.commune,adresse:m.adresse,adresse_depart:m.adresse_depart,description:m.description,frais:m.frais,modePaiement:m.mode_paiement,mode_paiement:m.mode_paiement,destNom:m.dest_nom,dest_nom:m.dest_nom,destTel:m.dest_tel,dest_tel:m.dest_tel,createdAt:m.created_at,created_at:m.created_at,acceptedAt:m.accepted_at,accepted_at:m.accepted_at,recupereAt:m.recupere_at,recupere_at:m.recupere_at,enrouteAt:m.enroute_at,enroute_at:m.enroute_at,livreAt:m.livre_at,livre_at:m.livre_at,livreurId:m.livreur_id,marchandId:m.marchand_id,bonId:bonId,bon_id:bonId}};
+      }
+
+      case 'getBon':{
+        var r=await sb.from('bons').select('*').eq('id',p.id).single();
+        if(r.error||!r.data)return{ok:false,error:'Introuvable'};
+        var b=r.data;
+        return{ok:true,bon:{id:b.id,vendeuse:b.marchand,livreur:b.livreur,dest:b.dest,adresse:b.adresse,modePaiement:b.mode_paiement,mode_paiement:b.mode_paiement,frais:b.frais,generatedAt:b.generated_at,generated_at:b.generated_at}};
+      }
+
+      case 'updateStatus':{
+        var now=new Date().toISOString();
+        var updates={status:p.status};
+        var tsCols={accepte:'accepted_at',recupere:'recupere_at',enroute:'enroute_at',livre:'livre_at'};
+        if(tsCols[p.status])updates[tsCols[p.status]]=now;
+        var upd=await sb.from('missions').update(updates).eq('id',p.id);
+        if(upd.error)return{ok:false,error:upd.error.message};
+        if(p.status==='livre'){
+          var mQ=await sb.from('missions').select('*').eq('id',p.id).single();
+          if(mQ.data){
+            var m=mQ.data;
+            await sb.from('bons').insert({mission_id:m.id,marchand:m.marchand_nom||'—',livreur:m.livreur_nom||'—',dest:m.dest_nom,adresse:m.adresse,mode_paiement:m.mode_paiement,frais:m.frais});
+          }
+        }
+        return{ok:true};
+      }
+
+      case 'createAlerte':{
+        var r=await sb.from('alertes').insert({mission_id:p.missionId,from_role:p.fromRole,from_nom:p.fromNom,type:p.type,description:p.description,lu:false});
+        if(r.error)return{ok:false,error:r.error.message};
+        return{ok:true};
+      }
+
+      case 'createMission':{
+        var livreurId=null;
+        if(p.livreurTel){var lQ=await sb.from('users').select('id').eq('tel',p.livreurTel).eq('role','livreur').maybeSingle();if(lQ.data)livreurId=lQ.data.id}
+        var ins=await sb.from('missions').insert({
+          marchand_id:p.vendeuseId,marchand_nom:p.vendeuseNom,
+          livreur_id:livreurId,livreur_nom:p.livreurNom!=='Non assigné'?p.livreurNom:null,livreur_tel:p.livreurTel||null,
+          dest_nom:p.destNom,dest_tel:p.destTel||null,adresse_depart:p.adresseDepart||null,
+          adresse:p.adresse,commune:p.commune,description:p.description||null,
+          frais:parseInt(p.frais)||0,mode_paiement:p.modePaiement,
+          distance_km:parseInt(p.distanceKm)||0,status:'attente',date_souhaitee:p.dateSouhaitee||null
+        }).select('id').single();
+        if(ins.error)return{ok:false,error:ins.error.message};
+        return{ok:true,id:ins.data.id};
+      }
+
+      case 'getCatalogue':{
+        var r=await sb.from('users').select('nom,tel,note,zones,vehicule,disponible,verifie').eq('role','livreur').eq('disponible',true).order('note',{ascending:false});
+        if(r.error)return{ok:false,error:r.error.message};
+        var items=(r.data||[]).map(function(l){return{nom:l.nom,tel:l.tel,note:l.note||0,zones:l.zones,typeVehicule:l.vehicule,disponible:l.disponible?'OUI':'NON',badgeVerifie:l.verifie?'OUI':'NON'}});
+        return{ok:true,items:items,total:items.length,locked:false};
+      }
+
+      case 'updateDisponibilite':{
+        var r=await sb.from('users').update({disponible:p.disponible==='true'}).eq('id',p.id);
+        if(r.error)return{ok:false,error:r.error.message};
+        return{ok:true};
+      }
+
+      case 'genererRapportMensuel':{
+        var r=await sb.from('missions').select('status,frais,created_at').or('marchand_id.eq.'+p.userId+',livreur_id.eq.'+p.userId);
+        if(r.error)return{ok:false,error:r.error.message};
+        var mois=parseInt(p.mois),annee=parseInt(p.annee);
+        var all=(r.data||[]).filter(function(m){var d=new Date(m.created_at);return d.getMonth()===mois&&d.getFullYear()===annee});
+        var livrees=all.filter(function(m){return m.status==='livre'});
+        var volume=livrees.reduce(function(a,m){return a+(parseInt(m.frais)||0)},0);
+        return{ok:true,rapport:{mois:mois,annee:annee,total:all.length,livrees:livrees.length,tauxSucces:all.length?Math.round(livrees.length/all.length*100):0,volume:volume}};
+      }
+
+      case 'trackMission':{
+        var r=await sb.from('missions').select('*').eq('id',p.id).single();
+        if(r.error||!r.data)return{ok:false};
+        var m=r.data;
+        var tl=[];
+        if(m.created_at)tl.push({label:'📋 Demande créée',time:fmtDate(m.created_at)});
+        if(m.accepted_at)tl.push({label:'✅ Acceptée',time:fmtDate(m.accepted_at)});
+        if(m.recupere_at)tl.push({label:'📦 Colis récupéré',time:fmtDate(m.recupere_at)});
+        if(m.enroute_at)tl.push({label:'🛵 En route',time:fmtDate(m.enroute_at)});
+        if(m.livre_at)tl.push({label:'✅ Livré',time:fmtDate(m.livre_at)});
+        var bon=null;
+        var bQ=await sb.from('bons').select('mode_paiement,frais').eq('mission_id',m.id).maybeSingle();
+        if(bQ.data)bon={modePaiement:bQ.data.mode_paiement,frais:bQ.data.frais};
+        var alQ=await sb.from('alertes').select('type,description,created_at').eq('mission_id',m.id);
+        return{ok:true,mission:{id:m.id,status:m.status,commune:m.commune,adresse:m.adresse,destNom:m.dest_nom,dest_nom:m.dest_nom,destTel:m.dest_tel,modePaiement:m.mode_paiement,mode_paiement:m.mode_paiement,frais:m.frais,vendeuseNom:m.marchand_nom||'—',vendeuse_nom:m.marchand_nom||'—'},timeline:tl,bon:bon,alertes:alQ.data||[]};
+      }
+
+      case 'checkMeteo':
+        return{ok:true,alerte:false};
+
+      default:
+        return{ok:false,error:'Action inconnue: '+p.action};
+    }
+  }catch(err){return{ok:false,error:'Réseau: '+(err.message||err)}}
+}
 function toast(m,t,d){t=t||'';d=d||3200;const el=document.getElementById('toast');el.textContent=m;el.className='toast show '+t;setTimeout(function(){el.className='toast'},d)}
 function showLoading(t){document.getElementById('ld-txt').textContent=t||'Chargement...';document.getElementById('loading').classList.add('show')}
 function hideLoading(){document.getElementById('loading').classList.remove('show')}
@@ -822,7 +980,7 @@ async function creerLivraison(){
   showLoading('Création de la livraison...');
   var kmTxt=document.getElementById('dist-km').textContent||'0';
   var km=parseInt(kmTxt)||0;
-  var res=await api({action:'createMission',vendeuseId:USER.id,vendeuseNom:USER.nom,vendeusetel:USER.tel,livreurNom:livreurNom,destNom:dest,destTel:destTel?fmtTel(destTel):'',adresseDepart:depart,adresse:arrivee,commune:commune,frais:frais||'0',modePaiement:paiement,description:desc,dateSouhaitee:date,distanceKm:km});
+  var res=await api({action:'createMission',vendeuseId:USER.id,vendeuseNom:USER.nom,vendeusetel:USER.tel,livreurNom:livreurNom,livreurTel:livreurTel,destNom:dest,destTel:destTel?fmtTel(destTel):'',adresseDepart:depart,adresse:arrivee,commune:commune,frais:frais||'0',modePaiement:paiement,description:desc,dateSouhaitee:date,distanceKm:km});
   hideLoading();btn.disabled=false;
   if(!res.ok){toast('Erreur : '+res.error,'rouge');return}
   ['m-dest','m-dest-tel','m-depart','m-arrivee','m-frais','m-desc'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=''});
