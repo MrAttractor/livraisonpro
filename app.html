@@ -377,6 +377,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
       <div class="card"><div class="card-title"><span class="ci ci-vt">📊</span>Mes performances</div><div id="l-stats"></div></div>
       <div id="l-plan"></div>
       <button class="aide-btn" onclick="showAide('l')">❓ Comment ça marche</button>
+      <button onclick="showInstallGuide()" style="width:100%;padding:13px;background:transparent;border:2px solid rgba(247,127,0,.35);color:var(--or);border-radius:16px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">📲 Installer l'app sur mon téléphone</button>
     <button onclick="seDeconnecter()" style="width:100%;padding:13px;background:transparent;border:2px solid #FEE2E2;color:#DC2626;border-radius:16px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">🚪 Se déconnecter</button>
     </div>
   </div>
@@ -472,6 +473,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
       <div id="m-rapport-result"></div>
       <div id="m-plan"></div>
       <button class="aide-btn" onclick="showAide('m')">❓ Comment ça marche</button>
+      <button onclick="showInstallGuide()" style="width:100%;padding:13px;background:transparent;border:2px solid rgba(247,127,0,.35);color:var(--or);border-radius:16px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">📲 Installer l'app sur mon téléphone</button>
     <button onclick="seDeconnecter()" style="width:100%;padding:13px;background:transparent;border:2px solid #FEE2E2;color:#DC2626;border-radius:16px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">🚪 Se déconnecter</button>
     </div>
   </div>
@@ -485,6 +487,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
 <div class="modal-overlay" id="modal-mission"><div class="modal"><div class="modal-handle"></div><div id="modal-mission-content"></div><button class="btn btn-ghost" onclick="closeModal('modal-mission')" style="margin-top:10px">Fermer</button></div></div>
 <div class="modal-overlay" id="modal-catalogue"><div class="modal"><div class="modal-handle"></div><div class="modal-title">🔍 Choisir un livreur</div><div id="modal-cat-content"></div><button class="btn btn-ghost" onclick="closeModal('modal-catalogue')" style="margin-top:10px">Fermer</button></div></div>
 <div class="modal-overlay" id="modal-aide"><div class="modal"><div class="modal-handle"></div><div class="modal-title">❓ Comment ça marche</div><div id="modal-aide-content"></div><button class="btn btn-ghost" onclick="closeModal('modal-aide')" style="margin-top:10px">Fermer</button></div></div>
+<div class="modal-overlay" id="modal-pwa"><div class="modal"><div class="modal-handle"></div><div class="modal-title">📲 Installer l'app</div><div style="font-size:13px;color:var(--gris);margin-bottom:14px;line-height:1.6">Ajoutez Livraison Pro sur votre écran d'accueil — ça s'ouvre comme une vraie app, sans passer par le navigateur.</div><div style="display:flex;gap:8px;margin-bottom:16px"><button id="pwa-tab-and" onclick="switchPwaTab('android')" style="flex:1;padding:10px;border-radius:10px;border:none;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:var(--noir);color:#fff">🤖 Android</button><button id="pwa-tab-ios" onclick="switchPwaTab('ios')" style="flex:1;padding:10px;border-radius:10px;border:none;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:var(--gris-b);color:var(--noir)">🍎 iPhone</button></div><div id="pwa-guide-android"><div class="pwa-step"><div class="pwa-num">1</div><div class="pwa-txt">Ouvrez le site dans <strong>Chrome</strong></div></div><div class="pwa-step"><div class="pwa-num">2</div><div class="pwa-txt">Appuyez sur les <strong>3 points ⋮</strong> en haut à droite</div></div><div class="pwa-step"><div class="pwa-num">3</div><div class="pwa-txt">Appuyez sur <strong>"Ajouter à l'écran d'accueil"</strong></div></div><div class="pwa-step"><div class="pwa-num">4</div><div class="pwa-txt">Confirmez en tapant <strong>"Ajouter"</strong> ✅</div></div><div style="background:rgba(0,154,68,.1);border-radius:10px;padding:11px;margin-top:12px;font-size:12px;color:var(--vt)">✅ L'icône apparaît sur votre écran d'accueil. Rechargez chaque fois qu'on vous notifie une mission.</div></div><div id="pwa-guide-ios" style="display:none"><div style="background:rgba(247,127,0,.1);border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--or-d)">⚠️ Sur iPhone, utilisez <strong>Safari uniquement</strong>. Chrome iOS ne supporte pas l'installation.</div><div class="pwa-step"><div class="pwa-num">1</div><div class="pwa-txt">Ouvrez le lien dans <strong>Safari</strong></div></div><div class="pwa-step"><div class="pwa-num">2</div><div class="pwa-txt">Appuyez sur l'icône <strong>Partager ⎙</strong> en bas</div></div><div class="pwa-step"><div class="pwa-num">3</div><div class="pwa-txt">Faites défiler → appuyez <strong>"Sur l'écran d'accueil"</strong></div></div><div class="pwa-step"><div class="pwa-num">4</div><div class="pwa-txt">Appuyez <strong>"Ajouter"</strong> en haut à droite ✅</div></div><div style="background:rgba(0,154,68,.1);border-radius:10px;padding:11px;margin-top:12px;font-size:12px;color:var(--vt)">✅ L'icône Livraison Pro apparaît sur votre écran d'accueil.</div></div><button class="btn btn-ghost" onclick="closeModal('modal-pwa')" style="margin-top:16px">Fermer</button></div></div>
 
 <script>
 const SUPABASE_URL='https://jwucinmwrksqfrmkymds.supabase.co';
@@ -1161,6 +1164,15 @@ function showAide(role){
   document.getElementById('modal-aide-content').innerHTML=html;
   document.getElementById('btn-rc-aide').onclick=function(){closeModal('modal-aide');openModal('modal-rc');};
   openModal('modal-aide');
+}
+
+function showInstallGuide(){switchPwaTab(detectOS()==='ios'?'ios':'android');openModal('modal-pwa')}
+function switchPwaTab(tab){
+  document.getElementById('pwa-guide-android').style.display=tab==='android'?'block':'none';
+  document.getElementById('pwa-guide-ios').style.display=tab==='ios'?'block':'none';
+  var and=document.getElementById('pwa-tab-and'),ios=document.getElementById('pwa-tab-ios');
+  and.style.background=tab==='android'?'var(--noir)':'var(--gris-b)';and.style.color=tab==='android'?'#fff':'var(--noir)';
+  ios.style.background=tab==='ios'?'var(--noir)':'var(--gris-b)';ios.style.color=tab==='ios'?'#fff':'var(--noir)';
 }
 </script>
 </body>
