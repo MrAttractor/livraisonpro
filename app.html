@@ -217,6 +217,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
 .empty{text-align:center;padding:30px 16px;color:var(--gris)}
 .empty-icon{font-size:36px;margin-bottom:8px}
 .empty-text{font-size:12px;line-height:1.6}
+/* === CHANTIER 3 === */
+#broadcast-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.88);z-index:600;display:none;align-items:center;justify-content:center;padding:16px}
+#broadcast-overlay.show{display:flex}
+.bo-card{background:#0D0D0D;border:2.5px solid var(--or);border-radius:22px;padding:26px 20px;width:100%;max-width:390px;animation:boPulse 1.2s ease infinite alternate}
+@keyframes boPulse{from{box-shadow:0 0 0 0 rgba(247,127,0,.6)}to{box-shadow:0 0 0 20px rgba(247,127,0,0)}}
+.bo-header{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--or);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
+.bo-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;margin-bottom:3px}
+.bo-sub{font-size:12px;color:rgba(255,255,255,.45);margin-bottom:14px}
+.bo-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:12px}
+.bo-row span:first-child{color:rgba(255,255,255,.38)}
+.bo-row span:last-child{color:#fff;font-weight:600}
+.bo-frais{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--or);text-align:center;margin:14px 0}
+#gps-badge{display:none;align-items:center;gap:9px;background:rgba(0,154,68,.12);border:1px solid rgba(0,154,68,.3);border-radius:10px;padding:9px 13px;margin-bottom:10px;font-size:12px;color:var(--vt);font-weight:600}
+#gps-badge.active{display:flex}
+.gps-dot{width:8px;height:8px;border-radius:50%;background:var(--vt);animation:gpsPulse 1.2s ease infinite;flex-shrink:0}
+@keyframes gpsPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+#notif-bar{display:none;align-items:center;justify-content:space-between;gap:10px;background:rgba(247,127,0,.08);border:1px solid rgba(247,127,0,.22);border-radius:10px;padding:10px 13px;margin-bottom:10px}
+#notif-bar.show{display:flex}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -331,6 +349,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
   <div id="l-screens">
     <div class="screen active" id="sc-l-home">
       <div id="l-trial"></div>
+      <div id="notif-bar"><div style="font-size:12px;color:var(--or-d);line-height:1.4"><strong>Activer les alertes missions</strong><br><span style="opacity:.65">Soyez notifié dès qu'une mission arrive</span></div><button onclick="requestNotifPermission()" style="background:var(--or);color:#fff;border:none;border-radius:8px;padding:8px 13px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">Activer</button></div>
+      <div id="gps-badge"><div class="gps-dot"></div><span>GPS actif — mission en cours</span></div>
       <button class="dispo-btn off" id="dispo-btn" onclick="toggleDispo()">
         <span id="dispo-icon">⚫</span><span id="dispo-txt">Je suis disponible aujourd'hui</span>
       </button>
@@ -482,6 +502,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--gris-l);color:var(--noir)
   <button class="fab" id="fab" onclick="showScreen('m-nouvelle')" style="display:none">＋</button>
 </div>
 
+<!-- BROADCAST OVERLAY -->
+<div id="broadcast-overlay">
+  <div class="bo-card">
+    <div class="bo-header">🛵 Nouvelle mission disponible !</div>
+    <div class="bo-title" id="bo-dest">—</div>
+    <div class="bo-sub" id="bo-sub">—</div>
+    <div id="bo-details"></div>
+    <div class="bo-frais" id="bo-frais">— FCFA</div>
+    <button class="btn btn-vt" style="margin-bottom:8px;font-size:15px;padding:16px" onclick="accepterMission(window._broadcastId)">✅ J'accepte cette mission</button>
+    <button class="btn btn-ghost" onclick="ignorerMission()">Ignorer</button>
+  </div>
+</div>
+
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-rc"><div class="modal"><div class="modal-handle"></div><div class="modal-title">Reconnexion</div><div class="fg-group"><label class="fg-label">Votre numero WhatsApp</label><input class="fg-input" id="rc-input" placeholder="+225 07 XX XX XX XX" type="tel"><div style="font-size:11px;color:var(--rouge);margin-top:4px;display:none" id="rc-input-err">Numero introuvable</div></div><button class="btn btn-or" id="rc-btn" onclick="doReconnexion()" style="margin-bottom:8px">Rechercher</button><button class="btn btn-ghost" onclick="closeModal('modal-rc')">Annuler</button></div></div>
 <div class="modal-overlay" id="modal-mission"><div class="modal"><div class="modal-handle"></div><div id="modal-mission-content"></div><button class="btn btn-ghost" onclick="closeModal('modal-mission')" style="margin-top:10px">Fermer</button></div></div>
@@ -531,6 +564,14 @@ async function api(p){
         var r=await sb.from('missions').select('*').eq(col,p.userId).order('created_at',{ascending:false}).limit(50);
         if(r.error)return{ok:false,error:r.error.message};
         var ms=r.data||[];
+        // Broadcast missions (non assignées dans les zones du livreur)
+        if(p.role==='livreur'&&USER){
+          var zones=(USER.zones||USER.commune||'').split(',').map(function(z){return z.trim()}).filter(Boolean);
+          if(zones.length){
+            var bQ=await sb.from('missions').select('*').is('livreur_id',null).in('commune',zones).eq('status','attente').order('created_at',{ascending:false}).limit(15);
+            if(bQ.data&&bQ.data.length){var existIds=ms.map(function(m){return m.id});bQ.data.forEach(function(m){if(existIds.indexOf(m.id)<0)ms.push(m)})}
+          }
+        }
         var today=new Date().toDateString();
         var livrees=ms.filter(function(m){return m.status==='livre'});
         var volume=livrees.reduce(function(a,m){return a+(parseInt(m.frais)||0)},0);
@@ -649,7 +690,9 @@ async function api(p){
         var bQ=await sb.from('bons').select('mode_paiement,frais').eq('mission_id',m.id).maybeSingle();
         if(bQ.data)bon={modePaiement:bQ.data.mode_paiement,frais:bQ.data.frais};
         var alQ=await sb.from('alertes').select('type,description,created_at').eq('mission_id',m.id);
-        return{ok:true,mission:{id:m.id,status:m.status,commune:m.commune,adresse:m.adresse,destNom:m.dest_nom,dest_nom:m.dest_nom,destTel:m.dest_tel,modePaiement:m.mode_paiement,mode_paiement:m.mode_paiement,frais:m.frais,vendeuseNom:m.marchand_nom||'—',vendeuse_nom:m.marchand_nom||'—'},timeline:tl,bon:bon,alertes:alQ.data||[]};
+        var gpsQ=await sb.from('tracking_gps').select('lat,lng,created_at').eq('mission_id',m.id).order('created_at',{ascending:false}).limit(1);
+        var gps=gpsQ.data&&gpsQ.data.length?gpsQ.data[0]:null;
+        return{ok:true,mission:{id:m.id,status:m.status,commune:m.commune,adresse:m.adresse,destNom:m.dest_nom,dest_nom:m.dest_nom,destTel:m.dest_tel,modePaiement:m.mode_paiement,mode_paiement:m.mode_paiement,frais:m.frais,vendeuseNom:m.marchand_nom||'—',vendeuse_nom:m.marchand_nom||'—'},timeline:tl,bon:bon,alertes:alQ.data||[],gps:gps};
       }
 
       case 'checkMeteo':
@@ -679,7 +722,9 @@ window.addEventListener('offline',function(){document.getElementById('offline-ba
 setTimeout(function(){
   var params=new URLSearchParams(window.location.search);
   var trackId=params.get('track');
+  var adminKey=params.get('admin');
   if(trackId){showPublicTracking(trackId);return}
+  if(adminKey==='lp2024'){initAdmin();return}
   document.getElementById('splash').style.opacity='0';
   setTimeout(function(){
     document.getElementById('splash').style.display='none';
@@ -759,6 +804,7 @@ function initApp(){
   // Vider cache et forcer sync au démarrage
   localStorage.removeItem('lp_missions');
   localStorage.removeItem('lp_alertes');
+  if(USER.role==='livreur'){maybeShowNotifBar();initRealtime()}
   syncData(false);
 }
 
@@ -845,6 +891,7 @@ async function syncData(showToast){
       renderDashboard(dash);
       if(dash.recentMissions){MISSIONS=dash.recentMissions;localStorage.setItem('lp_missions',JSON.stringify(MISSIONS))}
       if(dash.trial)renderTrial(dash.trial);
+      if(USER&&USER.role==='livreur')checkActiveGPS();
     }
     var alertes=await api({action:'getAlertes',nonLuSeulement:'false'});
     if(alertes.ok){ALERTES=alertes.alertes||[];localStorage.setItem('lp_alertes',JSON.stringify(ALERTES));renderAlertes()}
@@ -913,7 +960,7 @@ async function showMission(id){
   var nextL={accepte:'✅ Accepter la mission',recupere:'📦 Colis récupéré',enroute:'🛵 Partir en livraison',livre:'✅ Confirmer la livraison'};
   var actions='';
   if(USER.role==='livreur'){
-    if(next[m.status])actions+='<button class="btn btn-vt" onclick="changerStatus(\''+m.id+'\',\''+next[m.status]+'\',\''+(m.destTel||m.dest_tel||'')+'\',\''+(m.destNom||m.dest_nom||'')+'\')" style="margin-bottom:8px">'+nextL[next[m.status]]+'</button>';
+    if(next[m.status]){var isBcast=m.status==='attente'&&!m.livreurId&&!m.livreur_id;var btnFn=isBcast?'accepterMission(\''+m.id+'\')':'changerStatus(\''+m.id+'\',\''+next[m.status]+'\',\''+(m.destTel||m.dest_tel||'')+'\',\''+(m.destNom||m.dest_nom||'')+'\')';actions+='<button class="btn btn-vt" onclick="'+btnFn+'" style="margin-bottom:8px">'+nextL[next[m.status]]+'</button>';}
     if(['livre','echec','annule'].indexOf(m.status)===-1)actions+='<button class="btn btn-ghost" onclick="changerStatus(\''+m.id+'\',\'echec\',\'\',\'\')" style="margin-bottom:8px">❌ Signaler un échec</button>';
   }
   if(USER.role==='marchand'&&m.status==='attente')actions+='<button class="btn btn-rouge" onclick="changerStatus(\''+m.id+'\',\'annule\',\'\',\'\')" style="margin-bottom:8px">🚫 Annuler</button>';
@@ -948,6 +995,7 @@ async function changerStatus(id,newStatus,destTel,destNom){
   var msgs={accepte:'✅ Mission acceptée !',recupere:'📦 Colis récupéré !',enroute:'🛵 En route !',livre:'✅ Livraison confirmée !',echec:'❌ Échec enregistré',annule:'🚫 Annulé'};
   toast(msgs[newStatus]||'Statut mis à jour','vt');
   closeModal('modal-mission');
+  if(USER.role==='livreur'){if(['livre','echec','annule'].indexOf(newStatus)>=0)stopGPS();else if(newStatus==='accepte')startGPS(id)}
   await syncData(false);
   if((newStatus==='enroute'||newStatus==='livre')&&destTel&&destTel!=='undefined'&&destTel!==''){
     var tel=destTel.replace('+','');
@@ -1116,10 +1164,11 @@ async function showPublicTracking(id){
   var res=await api({action:'trackMission',id:id});
   var pubLd=document.getElementById('pub-ld');if(pubLd)pubLd.remove();
   if(!res.ok||!res.mission){document.body.innerHTML='<div style="max-width:430px;margin:0 auto;padding:60px 24px;text-align:center;font-family:DM Sans,sans-serif"><div style="font-size:48px;margin-bottom:16px">🔍</div><div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;margin-bottom:8px">Introuvable</div><div style="color:#6B7280;font-size:14px">Aucune livraison pour "'+id+'"</div></div>';return}
-  var m=res.mission,tl=res.timeline||[],bon=res.bon,alertes=res.alertes||[];
+  var m=res.mission,tl=res.timeline||[],bon=res.bon,alertes=res.alertes||[],gps=res.gps||null;
   var statuses={attente:{l:'⏳ En attente',bg:'#E5E7EB',c:'#6B7280'},accepte:{l:'✅ Accepté',bg:'#D4F5E2',c:'#007A35'},recupere:{l:'📦 Récupéré',bg:'#FFF0DC',c:'#D96B00'},enroute:{l:'🛵 En route',bg:'#FFF0DC',c:'#D96B00'},livre:{l:'✅ Livré',bg:'#D4F5E2',c:'#007A35'},echec:{l:'❌ Échec',bg:'#FEE2E2',c:'#DC2626'},annule:{l:'🚫 Annulé',bg:'#FEE2E2',c:'#DC2626'}};
   var s=statuses[m.status]||statuses.attente;
-  document.body.innerHTML='<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"><div style="max-width:430px;margin:0 auto;padding:20px;font-family:DM Sans,sans-serif;padding-bottom:40px"><div style="text-align:center;margin-bottom:16px"><div style="display:flex;width:40px;height:28px;border-radius:5px;overflow:hidden;margin:0 auto 10px"><div style="flex:1;background:#F77F00"></div><div style="flex:1;background:#fff"></div><div style="flex:1;background:#009A44"></div></div><div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;color:#0D0D0D">Livraison Pro 🇨🇮</div></div><div style="background:linear-gradient(135deg,#0D0D0D,#1c2a1c);border-radius:16px;padding:18px;margin-bottom:14px"><div style="font-size:9px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">SUIVI DE LIVRAISON</div><div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:10px">'+m.id+'</div><div style="display:inline-flex;align-items:center;background:'+s.bg+';color:'+s.c+';font-weight:700;font-size:11px;padding:6px 12px;border-radius:20px">'+s.l+'</div></div>'+(alertes.length?'<div style="background:#FEE2E2;border:1.5px solid rgba(220,38,38,.2);border-radius:10px;padding:11px 13px;margin-bottom:12px"><div style="font-size:12px;color:#DC2626;font-weight:600">🚨 '+alertes[0].type+' — '+alertes[0].description+'</div></div>':'')+'<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">👤 Votre livraison</div><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Destinataire</span><span style="font-weight:700">'+(m.destNom||m.dest_nom)+'</span></div><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Adresse</span><span style="font-weight:600;text-align:right;max-width:54%">'+(m.adresse||'')+', '+(m.commune||'')+'</span></div>'+(m.modePaiement||m.mode_paiement?'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Paiement</span><span style="font-weight:700;color:#009A44">'+(m.modePaiement||m.mode_paiement)+'</span></div>':'')+'<div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px"><span style="color:#6B7280">Envoyé par</span><span style="font-weight:600">'+(m.vendeuseNom||m.vendeuse_nom)+'</span></div></div>'+(tl.length?'<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">📍 Suivi en temps réel</div>'+tl.map(function(t){return'<div style="display:flex;gap:11px;padding:8px 0;border-bottom:1px solid #E5E7EB"><div style="width:22px;height:22px;border-radius:50%;background:#009A44;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;flex-shrink:0">✓</div><div><div style="font-size:12px;font-weight:600">'+t.label+'</div><div style="font-size:10px;color:#6B7280;margin-top:1px">'+t.time+'</div></div></div>'}).join('')+'</div>':'')+(bon?'<div style="background:linear-gradient(135deg,#f8fffe,#f0faf5);border:2px solid #D4F5E2;border-radius:14px;padding:16px;margin-bottom:12px"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:800;color:#007A35;margin-bottom:10px">📄 Bon de livraison</div>'+(bon.modePaiement?'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,154,68,.1);font-size:12px"><span style="color:#6B7280">Mode paiement</span><span style="font-weight:700;color:#009A44">'+bon.modePaiement+'</span></div>':'')+'<div style="background:#D4F5E2;border-radius:6px;padding:7px;text-align:center;margin-top:10px;font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#007A35">LIVRÉ ✅</div></div>':'')+'<div style="text-align:center;padding:16px 0;color:#6B7280;font-size:11px"><div style="font-family:Syne,sans-serif;font-weight:800;color:#F77F00;font-size:13px;margin-bottom:3px">Livraison Pro 🇨🇮</div>La livraison professionnelle en Côte d\'Ivoire</div></div>';
+  document.body.innerHTML='<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"><div style="max-width:430px;margin:0 auto;padding:20px;font-family:DM Sans,sans-serif;padding-bottom:'+(gps&&m.status==='enroute'?'90':'40')+'px"><div style="text-align:center;margin-bottom:16px"><div style="display:flex;width:40px;height:28px;border-radius:5px;overflow:hidden;margin:0 auto 10px"><div style="flex:1;background:#F77F00"></div><div style="flex:1;background:#fff"></div><div style="flex:1;background:#009A44"></div></div><div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;color:#0D0D0D">Livraison Pro 🇨🇮</div></div><div style="background:linear-gradient(135deg,#0D0D0D,#1c2a1c);border-radius:16px;padding:18px;margin-bottom:14px"><div style="font-size:9px;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">SUIVI DE LIVRAISON</div><div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:10px">'+m.id+'</div><div style="display:inline-flex;align-items:center;background:'+s.bg+';color:'+s.c+';font-weight:700;font-size:11px;padding:6px 12px;border-radius:20px">'+s.l+'</div></div>'+(alertes.length?'<div style="background:#FEE2E2;border:1.5px solid rgba(220,38,38,.2);border-radius:10px;padding:11px 13px;margin-bottom:12px"><div style="font-size:12px;color:#DC2626;font-weight:600">🚨 '+alertes[0].type+' — '+alertes[0].description+'</div></div>':'')+'<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">👤 Votre livraison</div><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Destinataire</span><span style="font-weight:700">'+(m.destNom||m.dest_nom)+'</span></div><div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Adresse</span><span style="font-weight:600;text-align:right;max-width:54%">'+(m.adresse||'')+', '+(m.commune||'')+'</span></div>'+(m.modePaiement||m.mode_paiement?'<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #E5E7EB;font-size:12px"><span style="color:#6B7280">Paiement</span><span style="font-weight:700;color:#009A44">'+(m.modePaiement||m.mode_paiement)+'</span></div>':'')+'<div style="display:flex;justify-content:space-between;padding:7px 0;font-size:12px"><span style="color:#6B7280">Envoyé par</span><span style="font-weight:600">'+(m.vendeuseNom||m.vendeuse_nom)+'</span></div></div>'+(tl.length?'<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 16px rgba(0,0,0,.08)"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;margin-bottom:10px">📍 Suivi en temps réel</div>'+tl.map(function(t){return'<div style="display:flex;gap:11px;padding:8px 0;border-bottom:1px solid #E5E7EB"><div style="width:22px;height:22px;border-radius:50%;background:#009A44;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;flex-shrink:0">✓</div><div><div style="font-size:12px;font-weight:600">'+t.label+'</div><div style="font-size:10px;color:#6B7280;margin-top:1px">'+t.time+'</div></div></div>'}).join('')+'</div>':'')+(bon?'<div style="background:linear-gradient(135deg,#f8fffe,#f0faf5);border:2px solid #D4F5E2;border-radius:14px;padding:16px;margin-bottom:12px"><div style="font-family:Syne,sans-serif;font-size:13px;font-weight:800;color:#007A35;margin-bottom:10px">📄 Bon de livraison</div>'+(bon.modePaiement?'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,154,68,.1);font-size:12px"><span style="color:#6B7280">Mode paiement</span><span style="font-weight:700;color:#009A44">'+bon.modePaiement+'</span></div>':'')+'<div style="background:#D4F5E2;border-radius:6px;padding:7px;text-align:center;margin-top:10px;font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#007A35">LIVRÉ ✅</div></div>':'')+'<div style="text-align:center;padding:16px 0;color:#6B7280;font-size:11px"><div style="font-family:Syne,sans-serif;font-weight:800;color:#F77F00;font-size:13px;margin-bottom:3px">Livraison Pro 🇨🇮</div>La livraison professionnelle en Côte d\'Ivoire</div></div>';
+  if(gps&&m.status==='enroute'){var gEl=document.createElement('div');gEl.style='position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;padding:10px 16px 20px;background:#fff;border-top:2px solid #009A44;z-index:100';gEl.innerHTML='<a href="https://www.google.com/maps?q='+gps.lat+','+gps.lng+'" target="_blank" style="display:block;background:linear-gradient(135deg,#009A44,#007A35);color:#fff;border-radius:12px;padding:14px;text-align:center;font-family:Syne,sans-serif;font-size:13px;font-weight:800;text-decoration:none">📍 Voir position GPS du livreur →</a>';document.body.appendChild(gEl)}
 }
 
 // DÉCONNEXION
@@ -1164,6 +1213,155 @@ function showAide(role){
   document.getElementById('modal-aide-content').innerHTML=html;
   document.getElementById('btn-rc-aide').onclick=function(){closeModal('modal-aide');openModal('modal-rc');};
   openModal('modal-aide');
+}
+
+// ===== BROADCAST REALTIME =====
+var _realtimeChannel=null;
+function initRealtime(){
+  if(!USER||USER.role!=='livreur')return;
+  if(_realtimeChannel){sb.removeChannel(_realtimeChannel);_realtimeChannel=null}
+  var zones=(USER.zones||USER.commune||'').split(',').map(function(z){return z.trim()}).filter(Boolean);
+  _realtimeChannel=sb.channel('lp-broadcast-'+USER.id)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'missions'},function(payload){
+      var m=payload.new;
+      if(m.livreur_id||m.status!=='attente')return;
+      if(!DISPO)return;
+      if(zones.indexOf(m.commune)<0)return;
+      if(MISSIONS.find(function(x){return x.id===m.id}))return;
+      handleBroadcastMission(m);
+    })
+    .subscribe();
+}
+
+function handleBroadcastMission(m){
+  var mapped={id:m.id,status:m.status,commune:m.commune,adresse:m.adresse,frais:m.frais,modePaiement:m.mode_paiement,mode_paiement:m.mode_paiement,destNom:m.dest_nom,dest_nom:m.dest_nom,createdAt:m.created_at};
+  MISSIONS.unshift(mapped);localStorage.setItem('lp_missions',JSON.stringify(MISSIONS));renderMissions();
+  playNotifSound();
+  if(window.Notification&&Notification.permission==='granted'){
+    try{new Notification('🛵 Nouvelle mission !',{body:(m.dest_nom||'')+' — '+m.commune+' — '+parseInt(m.frais||0).toLocaleString()+' FCFA',tag:m.id})}catch(e){}
+  }
+  showBroadcastOverlay(m);
+}
+
+function playNotifSound(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [[523,0],[659,.15],[784,.3]].forEach(function(p){
+      var o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);o.frequency.value=p[0];o.type='sine';
+      var t=ctx.currentTime+p[1];
+      g.gain.setValueAtTime(.4,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);
+      o.start(t);o.stop(t+.3);
+    });
+  }catch(e){}
+}
+
+function requestNotifPermission(){
+  if(!('Notification' in window)){toast('Votre navigateur ne supporte pas les notifications','rouge');return}
+  Notification.requestPermission().then(function(perm){
+    if(perm==='granted'){toast('🔔 Notifications activées !','vt');document.getElementById('notif-bar').classList.remove('show')}
+    else toast('Notifications refusées. Activez dans les réglages du navigateur.','')
+  });
+}
+
+function maybeShowNotifBar(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='default')document.getElementById('notif-bar').classList.add('show');
+}
+
+function showBroadcastOverlay(m){
+  window._broadcastId=m.id;
+  document.getElementById('bo-dest').textContent=m.dest_nom||'—';
+  document.getElementById('bo-sub').textContent='📍 '+m.commune+(m.adresse?' — '+(m.adresse||'').substring(0,30):'');
+  var det='';
+  if(m.description)det+='<div class="bo-row"><span>Contenu</span><span>'+m.description+'</span></div>';
+  if(m.mode_paiement)det+='<div class="bo-row"><span>Paiement</span><span>'+m.mode_paiement+'</span></div>';
+  if(m.distance_km)det+='<div class="bo-row"><span>Distance</span><span>'+m.distance_km+' km</span></div>';
+  document.getElementById('bo-details').innerHTML=det;
+  document.getElementById('bo-frais').textContent=parseInt(m.frais||0).toLocaleString()+' FCFA';
+  document.getElementById('broadcast-overlay').classList.add('show');
+}
+
+async function accepterMission(id){
+  if(!id)return;
+  showLoading('Acceptation...');
+  var now=new Date().toISOString();
+  var upd=await sb.from('missions')
+    .update({livreur_id:USER.id,livreur_nom:USER.nom,livreur_tel:USER.tel,status:'accepte',accepted_at:now})
+    .eq('id',id).eq('status','attente').is('livreur_id',null).select('id');
+  hideLoading();ignorerMission();
+  if(upd.error||!upd.data||!upd.data.length){toast('⚡ Mission déjà prise par un autre livreur','rouge');await syncData(false);return}
+  toast('✅ Mission acceptée !','vt');
+  startGPS(id);
+  await syncData(false);
+  setTimeout(function(){
+    var msg='✅ *LIVRAISON PRO* — Mission acceptée !\n\n📦 '+id+'\n🛵 '+USER.nom+' — '+USER.tel+'\n\nJe récupère le colis.';
+    if(confirm('Notifier le marchand par WhatsApp ?'))window.open('https://wa.me/?text='+encodeURIComponent(msg));
+  },500);
+}
+
+function ignorerMission(){document.getElementById('broadcast-overlay').classList.remove('show');window._broadcastId=null}
+
+// ===== GPS TRACKING =====
+var _gpsTimer=null,_gpsMissionId=null;
+
+function startGPS(missionId){
+  if(!navigator.geolocation)return;
+  if(_gpsMissionId===missionId)return;
+  stopGPS();
+  _gpsMissionId=missionId;
+  localStorage.setItem('lp_active_mission',missionId);
+  var badge=document.getElementById('gps-badge');if(badge)badge.classList.add('active');
+  navigator.geolocation.getCurrentPosition(function(p){sendGPS(p.coords.latitude,p.coords.longitude)},function(){},{enableHighAccuracy:true,timeout:8000});
+  _gpsTimer=setInterval(function(){
+    navigator.geolocation.getCurrentPosition(function(p){sendGPS(p.coords.latitude,p.coords.longitude)},function(){},{enableHighAccuracy:true,timeout:8000});
+  },30000);
+}
+
+async function sendGPS(lat,lng){
+  if(!_gpsMissionId)return;
+  try{await sb.from('tracking_gps').insert({mission_id:_gpsMissionId,lat:lat,lng:lng})}catch(e){}
+}
+
+function stopGPS(){
+  if(_gpsTimer){clearInterval(_gpsTimer);_gpsTimer=null}
+  _gpsMissionId=null;
+  localStorage.removeItem('lp_active_mission');
+  var badge=document.getElementById('gps-badge');if(badge)badge.classList.remove('active');
+}
+
+function checkActiveGPS(){
+  if(!USER||USER.role!=='livreur'||_gpsMissionId)return;
+  var activeId=localStorage.getItem('lp_active_mission');
+  if(!activeId)return;
+  var active=MISSIONS.find(function(m){return m.id===activeId&&['accepte','recupere','enroute'].indexOf(m.status)>=0});
+  if(active)startGPS(activeId);
+  else localStorage.removeItem('lp_active_mission');
+}
+
+// ===== ADMIN PANEL =====
+async function initAdmin(){
+  document.getElementById('splash').style.display='none';
+  document.body.style.background='#f4f5f7';
+  document.body.innerHTML='<div style="max-width:430px;margin:0 auto;padding:20px;font-family:DM Sans,sans-serif;padding-bottom:40px"><div style="text-align:center;margin-bottom:20px"><div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#0D0D0D">🛵 Livraison Pro — Admin</div><div style="font-size:11px;color:#6B7280;margin-top:4px">Gestion des livreurs</div></div><div id="adm"></div></div>';
+  var r=await sb.from('users').select('*').eq('role','livreur').order('created_at',{ascending:false});
+  var all=r.data||[];
+  var pending=all.filter(function(l){return!l.verifie});
+  var verified=all.filter(function(l){return l.verifie});
+  var html='<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 16px rgba(0,0,0,.08)">';
+  html+='<div style="font-family:Syne,sans-serif;font-size:13px;font-weight:800;margin-bottom:14px">⏳ En attente ('+pending.length+')</div>';
+  if(!pending.length)html+='<div style="font-size:13px;color:#6B7280;padding:10px;text-align:center">Aucun livreur en attente</div>';
+  pending.forEach(function(l){html+='<div style="padding:14px 0;border-bottom:1px solid #E5E7EB"><div style="font-weight:700;font-size:13px;margin-bottom:2px">'+l.nom+'</div><div style="font-size:11px;color:#6B7280;margin-bottom:4px">'+l.tel+' · '+l.commune+' · '+(l.vehicule||'—')+'</div><div style="font-size:10px;color:#9CA3AF;margin-bottom:10px">Inscrit le '+new Date(l.created_at).toLocaleDateString('fr-FR')+'</div><div style="display:flex;gap:8px"><button onclick="admValider(\''+l.id+'\')" style="flex:1;padding:9px;background:#009A44;color:#fff;border:none;border-radius:9px;font-family:Syne,sans-serif;font-size:11px;font-weight:700;cursor:pointer">✅ Valider</button><a href="https://wa.me/'+l.tel.replace('+','')+'" target="_blank" style="flex:1;padding:9px;background:#25D366;color:#fff;border:none;border-radius:9px;font-family:Syne,sans-serif;font-size:11px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center">📲 WA</a></div></div>'});
+  html+='</div><div style="background:#fff;border-radius:16px;padding:16px;box-shadow:0 2px 16px rgba(0,0,0,.08)">';
+  html+='<div style="font-family:Syne,sans-serif;font-size:13px;font-weight:800;margin-bottom:14px">✅ Vérifiés ('+verified.length+')</div>';
+  verified.forEach(function(l){html+='<div style="padding:8px 0;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:12px;font-weight:600">'+l.nom+'</div><div style="font-size:11px;color:#6B7280">'+l.tel+' · '+l.commune+'</div></div><span style="background:#D4F5E2;color:#007A35;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">✅</span></div>'});
+  html+='</div>';
+  document.getElementById('adm').innerHTML=html;
+}
+
+async function admValider(id){
+  await sb.from('users').update({verifie:true}).eq('id',id);
+  initAdmin();
 }
 
 function showInstallGuide(){switchPwaTab(detectOS()==='ios'?'ios':'android');openModal('modal-pwa')}
